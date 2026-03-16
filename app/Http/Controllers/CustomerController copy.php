@@ -13,8 +13,7 @@ class CustomerController extends Controller
      */
     public function index()
     {
-        $customers = Customer::latest()->paginate(10);
-        return view('indexCustomer', compact('customers'));
+        //
     }
 
     /**
@@ -25,7 +24,7 @@ class CustomerController extends Controller
         return view('createCustomer');
     }
 
-
+    
     public function store(Request $request)
     {
         // Validate the incoming request
@@ -46,35 +45,11 @@ class CustomerController extends Controller
             'zb_id' => $data['zb_id'] ?? null,
         ]);
 
-        // // Prepare webhook payload
-        // $webhookData = [
-        //     'company_id' => '123',
-        //     'organization_id' => '325225',
-        //     'module' => 'User',
-        //     'event' => 'user.created',
-        //     'external_app' => '[zb,qb]',
-        //     'created_by'  => '1',
-        //     'token' => 'if needs to passed',
-        //     'user' => [
-        //         'id' => $customer->id, // Use the database ID
-        //         'contact_name' => $customer->contact_name,
-        //         'email' => $customer->email,
-        //         'company_name' => $customer->company_name,
-        //         'phone' => $customer->phone,
-        //         'zb_id' => $customer->zb_id,
-        //     ]
-        // ];
-
+        // Prepare webhook payload
         $webhookData = [
-            'company_id' => '123',
-            'organization_id' => '325225',
-            'module' => 'User',
             'event' => 'user.created',
-            'external_app' => ['zb', 'qb'], // as array
-            'created_by'  => '1',
-            'token' => 'YOUR_TOKEN_HERE', // replace with actual token if needed
             'user' => [
-                'id' => $customer->id,
+                'id' => $customer->id, // Use the database ID
                 'contact_name' => $customer->contact_name,
                 'email' => $customer->email,
                 'company_name' => $customer->company_name,
@@ -90,7 +65,7 @@ class CustomerController extends Controller
             ->useSecret('super-secret-key')
             ->dispatch();
 
-        return redirect()->route('customers.index')->with('success', 'Customer created and webhook sent successfully');
+        return redirect()->back()->with('success', 'Customer created and webhook sent successfully');
     }
 
 
@@ -104,9 +79,10 @@ class CustomerController extends Controller
 
     /**
      * Show the form for editing the specified resource.
-     */ public function edit(Customer $customer)
+     */
+    public function edit(Customer $customer)
     {
-        return view('editCustomer', compact('customer'));
+        //
     }
 
     /**
@@ -145,43 +121,17 @@ class CustomerController extends Controller
             ->useSecret('super-secret-key')
             ->dispatch();
 
-        return redirect()->route('customers.index')->with('success', 'Customer updated successfully');
+        return redirect()->back()->with('success', 'Customer updated successfully');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     /**
      * Remove the specified resource from storage.
      */
     public function destroy(Customer $customer)
     {
-        // Prepare webhook payload to notify Zoho Books
-        $webhookData = [
-            'event' => 'user.deleted',
-            'user' => [
-                'id' => $customer->id,
-                'contact_name' => $customer->contact_name,
-                'email' => $customer->email,
-                'company_name' => $customer->company_name,
-                'phone' => $customer->phone,
-                'zb_id' => $customer->zb_id, // Zoho Books ID to identify the record to delete
-            ]
-        ];
-
-        // Send webhook to your endpoint that will handle deletion in Zoho Books
-        WebhookCall::create()
-            ->url('http://127.0.0.1:8001/api/webhook') // replace with actual Zoho webhook endpoint if different
-            ->payload($webhookData)
-            ->useSecret('super-secret-key') // optional secret for verification
-            ->dispatch();
-
-        // Delete the customer locally
-        $customer->delete();
-
-        return redirect()->back()->with('success', 'Customer deleted successfully and Zoho Books notified.');
+        //
     }
-
+    
     public function updateZbId(Request $request, Customer $customer)
     {
         \Log::info('Update ZB ID request', [
