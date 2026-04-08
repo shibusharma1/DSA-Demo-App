@@ -6,6 +6,7 @@ use App\Models\Customer;
 use App\Services\IntegrationHubService;
 use Illuminate\Http\Request;
 
+
 class CustomerController extends Controller
 {
     public function __construct(
@@ -44,14 +45,8 @@ class CustomerController extends Controller
 
         $customer = Customer::create($data);
 
-        // Fire event to Integration Hub
-        $this->hub->fireEvent(
-            eventType: 'customer.created',
-            entityType: 'customer',
-            entityId: $customer->id,
-            payload: $customer->toArray()
-        );
-
+        //Here all the event will be fired to the Integration Hub Via CustomerObserver
+        
         return redirect()->route('customers.index')
             ->with('success', 'Customer created successfully.');
     }
@@ -79,14 +74,6 @@ class CustomerController extends Controller
 
         $customer->update($data);
 
-        // Fire event to Integration Hub
-        $this->hub->fireEvent(
-            eventType: 'customer.updated',
-            entityType: 'customer',
-            entityId: $customer->id,
-            payload: $customer->toArray()
-        );
-
         return redirect()->route('customers.index')
             ->with('success', 'Customer updated successfully.');
     }
@@ -96,14 +83,6 @@ class CustomerController extends Controller
      */
     public function destroy(Customer $customer)
     {
-        // Fire deletion event first
-        $this->hub->fireEvent(
-            eventType: 'customer.deleted',
-            entityType: 'customer',
-            entityId: $customer->id,
-            payload: $customer->toArray()
-        );
-
         $customer->delete();
 
         return redirect()->back()

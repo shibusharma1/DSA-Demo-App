@@ -10,11 +10,6 @@ Route::get('/', function () {
 });
 
 
-// Route::get('/send-webhook', [WebhookSenderController::class, 'sendWebhook']);
-
-// Route::get('/customer',[CustomerController::class,'create']);
-// Route::post('/customer',[CustomerController::class,'store']);
-
 // Customer CRUD
 Route::get('/customers', [CustomerController::class,'index'])->name('customers.index');
 Route::get('/customer/create', [CustomerController::class,'create'])->name('customers.create');
@@ -22,6 +17,7 @@ Route::post('/customer', [CustomerController::class,'store'])->name('customers.s
 Route::get('/customer/{customer}/edit', [CustomerController::class,'edit'])->name('customers.edit');
 Route::put('/customer/{customer}', [CustomerController::class,'update'])->name('customers.update');
 Route::delete('/customer/{customer}', [CustomerController::class,'destroy'])->name('customers.destroy');
+
 
 
 Route::get('api-credentials/{service_type?}/{company_id?}',[ApiCredentialController::class,'form'])->name('api-credentials.form'); 
