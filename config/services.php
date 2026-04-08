@@ -34,5 +34,11 @@ return [
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
     ],
+    // In DSA's config/services.php
+    'integration_hub' => [
+        'url'     => env('INTEGRATION_HUB_URL', 'http://127.0.0.1:8001'),
+        'secret'  => env('INTEGRATION_HUB_SECRET', ''),
+        'api_key' => env('INTEGRATION_HUB_API_KEY', ''),
+    ],
 
 ];
