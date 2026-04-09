@@ -1,6 +1,4 @@
 <?php
-// In your DSA application:
-// app/Observers/InvoiceObserver.php
 
 namespace App\Observers;
 

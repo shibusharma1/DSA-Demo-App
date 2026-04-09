@@ -77,12 +77,10 @@ class IntegrationHubService
                 ->useSecret('password')
                 ->dispatch();
 
-            // Log::info("web hook dispatched");
 
             return true;
         } catch (\Exception $e) {
             // CRITICAL: never let IH failure break DSA
-            // Just log and return false — DSA continues normally
             Log::error('Integration Hub unreachable', ['error' => $e->getMessage()]);
             return false;
         }

@@ -17,7 +17,7 @@ class IntegrationTokenRequest extends FormRequest
             'company_id'   => ['required', 'integer'],
             'user_id'      => ['required', 'integer'],
             'provider'     => ['required', 'string', 'max:50'],
-            'service_type' => ['nullable', 'string', 'max:50'],
+            'service_type' => ['required', 'string', 'max:50'],
         ];
     }
 }
