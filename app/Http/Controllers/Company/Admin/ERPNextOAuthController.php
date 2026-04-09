@@ -1,6 +1,5 @@
 <?php
 
-
 namespace App\Http\Controllers\Company\Admin;
 
 use App\Http\Controllers\Controller;
@@ -27,21 +26,23 @@ class ERPNextOAuthController extends Controller
         Session::put('erpnext_code_verifier', $codeVerifier);
         Session::put('erpnext_oauth_state', $state);
 
-        $redirectUri = config('erpnext.redirect_uri');
-        $baseUrl     = config('erpnext.base_url');
+        // Load all ERPNext config once (avoid repeated config() calls)
+        $config = config('erpnext');
+
+        $redirectUri = $config['redirect_uri'];
+        $baseUrl     = $config['base_url'];
 
         $params = http_build_query([
-            'client_id'             => config('erpnext.client_id'),
+            'client_id'             => $config['client_id'],  
             'response_type'         => 'code',
-            'scope'                 => config('erpnext.scopes'),
+            'scope'                 => $config['scopes'],     
             'redirect_uri'          => $redirectUri,
             'state'                 => $state,
             'code_challenge'        => $codeChallenge,
             'code_challenge_method' => 'S256',
         ], '', '&', PHP_QUERY_RFC3986);
 
-        $authUrl    = "{$baseUrl}/api/method/frappe.integrations.oauth2.authorize?{$params}";
-        $redirectUri = $redirectUri;
+        $authUrl = "{$baseUrl}/api/method/frappe.integrations.oauth2.authorize?{$params}";
 
         // Check if already connected
         $account = $this->accountService->getActiveAccount('erpnext', 'erpnext_cloud');
@@ -100,15 +101,18 @@ class ERPNextOAuthController extends Controller
             ]);
         }
 
-        $baseUrl     = config('erpnext.base_url');
-        $redirectUri = config('erpnext.redirect_uri');
+        // Load config once here as well
+        $config = config('erpnext');
+
+        $baseUrl     = $config['base_url'];
+        $redirectUri = $config['redirect_uri'];
 
         try {
             $response = Http::asForm()->post(
                 "{$baseUrl}/api/method/frappe.integrations.oauth2.get_token",
                 [
-                    'client_id'     => config('erpnext.client_id'),
-                    'client_secret' => config('erpnext.client_secret'),
+                    'client_id'     => $config['client_id'],      
+                    'client_secret' => $config['client_secret'],  
                     'code'          => $code,
                     'grant_type'    => 'authorization_code',
                     'redirect_uri'  => $redirectUri,
@@ -116,15 +120,10 @@ class ERPNextOAuthController extends Controller
                 ]
             );
 
-            Log::channel('frappy')->info('ERPNext token exchange response', [
-                'status' => $response->status(),
-                'body'   => $response->json(),
-            ]);
-
             if (!$response->successful()) {
                 Log::channel('frappy')->error('ERPNext token exchange failed', [
                     'status' => $response->status(),
-                    'body'   => $response->body(),
+                    'body'   => ['received' => true],
                 ]);
                 return $this->renderCallbackResponse([
                     'success' => false,
@@ -143,8 +142,8 @@ class ERPNextOAuthController extends Controller
                 'provider'        => 'erpnext',
                 'service_type'    => 'erpnext_cloud',
                 'organization_id' => $baseUrl,
-                'client_id'       => config('erpnext.client_id'),
-                'client_secret'   => config('erpnext.client_secret'),
+                'client_id'       => $config['client_id'],      
+                'client_secret'   => $config['client_secret'],  
                 'redirect_uri'    => $redirectUri,
                 'api_base_url'    => $baseUrl,
                 'token_response'  => $tokens,
@@ -153,9 +152,6 @@ class ERPNextOAuthController extends Controller
 
             // Clean up session
             Session::forget(['erpnext_code_verifier', 'erpnext_oauth_state']);
-
-            // Also update connector_configs for the Integration Hub pipeline
-            // $this->updateConnectorConfig($tokens, $baseUrl);
 
             Log::channel('frappy')->info('ERPNext OAuth completed successfully');
 
@@ -192,10 +188,6 @@ class ERPNextOAuthController extends Controller
             ]);
         }
 
-        // Also deactivate in connector_configs
-        // \App\Models\ConnectorConfig::where('connector_slug', 'erpnext')
-        //     ->update(['is_active' => false]);
-
         return response()->json(['success' => true, 'message' => 'Disconnected from ERPNext']);
     }
 
@@ -205,11 +197,14 @@ class ERPNextOAuthController extends Controller
         $erp = app(\App\Services\ERPNextApiService::class);
 
         try {
-            $response = $erp->get(config('erpnext.base_url') . '/api/v2/method/ping');
+            // reuse config here as well
+            $baseUrl = config('erpnext.base_url');
+
+            $response = $erp->get($baseUrl . '/api/v2/method/ping');
 
             Log::channel('frappy')->info('ERPNext ping', [
                 'status' => $response->status(),
-                'body'   => $response->json(),
+                'body'   => ['received' => true],
             ]);
 
             return response()->json([
@@ -222,32 +217,6 @@ class ERPNextOAuthController extends Controller
             return response()->json(['success' => false, 'message' => $e->getMessage()], 500);
         }
     }
-
-    // -------------------------------------------------------
-    // Private helpers
-    // -------------------------------------------------------
-
-    // private function updateConnectorConfig(array $tokens, string $baseUrl): void
-    // {
-    //     \App\Models\ConnectorConfig::updateOrCreate(
-    //         [
-    //             'tenant_id'      => 'dsa',
-    //             'connector_slug' => 'erpnext',
-    //         ],
-    //         [
-    //             'is_active'   => true,
-    //             'credentials' => [
-    //                 'access_token'  => $tokens['access_token'],
-    //                 'refresh_token' => $tokens['refresh_token'] ?? null,
-    //                 'base_url'      => $baseUrl,
-    //             ],
-    //             'settings'    => ['api_base_url' => $baseUrl],
-    //             'entity_map'  => ['customer', 'invoice', 'payment', 'sales_order', 'item'],
-    //         ]
-    //     );
-
-    //     Log::channel('frappy')->info('ConnectorConfig updated for erpnext');
-    // }
 
     private function renderCallbackResponse(array $data): \Illuminate\Http\Response
     {
