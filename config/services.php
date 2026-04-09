@@ -40,5 +40,8 @@ return [
         'secret'  => env('INTEGRATION_HUB_SECRET', ''),
         'api_key' => env('INTEGRATION_HUB_API_KEY', ''),
     ],
+    'internal' => [
+        'key' => env('INTERNAL_API_KEY'),
+    ],
 
 ];

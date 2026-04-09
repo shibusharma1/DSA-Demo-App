@@ -77,7 +77,7 @@ class IntegrationHubService
                 ->useSecret('password')
                 ->dispatch();
 
-            Log::info("web hook dispatched");
+            // Log::info("web hook dispatched");
 
             return true;
         } catch (\Exception $e) {
