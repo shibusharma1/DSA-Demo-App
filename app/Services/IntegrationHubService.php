@@ -66,9 +66,11 @@ class IntegrationHubService
             //Using Http request
             //===============================================
             WebhookCall::create()
-                ->url($this->baseUrl.'/api/v1/events')
+                ->url($this->baseUrl . '/api/v1/events')
                 ->payload([
                     'connectors'  => ['erpnext'],
+                    'company_id'  => 1,
+                    'user_id'     => 1,
                     'event_type'  => $eventType,
                     'entity_type' => $entityType,
                     'entity_id'   => $entityId,
@@ -77,7 +79,7 @@ class IntegrationHubService
                 ->useSecret('password')
                 ->dispatch();
 
-
+            Log::channel('frappy')->info('data dispatched');
             return true;
         } catch (\Exception $e) {
             // CRITICAL: never let IH failure break DSA
