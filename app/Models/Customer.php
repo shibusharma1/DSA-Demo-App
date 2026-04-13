@@ -11,6 +11,10 @@ class Customer extends Model
         'email',
         'company_name',
         'phone',
-        'zb_id'
+        'zoho_id',
+        'erpnext_id',
+        'tally_id',
+        'busy_id',
+        'sap_id'
     ];
 }

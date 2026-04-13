@@ -68,7 +68,7 @@ class IntegrationHubService
             WebhookCall::create()
                 ->url($this->baseUrl . '/api/v1/events')
                 ->payload([
-                    'connectors'  => ['erpnext'],
+                    'connectors'  => ['erpnext','zoho'],
                     'company_id'  => 1,
                     'user_id'     => 1,
                     'event_type'  => $eventType,

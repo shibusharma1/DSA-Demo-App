@@ -12,6 +12,7 @@ class IntegrationTokenResource extends JsonResource
         return [
             'id'           => $this->id,
             'company_id'   => $this->company_id,
+            'organization_id'   => $this->organization_id,
             'user_id'      => $this->user_id,
             'provider'     => $this->provider,
             'service_type' => $this->service_type,

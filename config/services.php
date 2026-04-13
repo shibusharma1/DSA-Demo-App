@@ -35,13 +35,26 @@ return [
         ],
     ],
     // In DSA's config/services.php
+    // 'integration_hub' => [
+    //     'url'     => env('INTEGRATION_HUB_URL', 'http://127.0.0.1:8001'),
+    //     'secret'  => env('INTEGRATION_HUB_SECRET', ''),
+    //     'api_key' => env('INTEGRATION_HUB_API_KEY', ''),
+    // ],
     'integration_hub' => [
-        'url'     => env('INTEGRATION_HUB_URL', 'http://127.0.0.1:8001'),
-        'secret'  => env('INTEGRATION_HUB_SECRET', ''),
-        'api_key' => env('INTEGRATION_HUB_API_KEY', ''),
+        'url'             => env('INTEGRATION_HUB_URL', 'http://127.0.0.1:8001'),
+        'secret'          => env('INTEGRATION_HUB_SECRET', ''),
+        'api_key'         => env('INTEGRATION_HUB_API_KEY', ''),
+        'inbound_secret'  => env('INTEGRATION_HUB_INBOUND_SECRET', 'inbound-secret'),
     ],
     'internal' => [
         'key' => env('INTERNAL_API_KEY'),
     ],
 
+    'zoho' => [
+        'client_id'     => env('ZOHO_CLIENT_ID'),
+        'client_secret' => env('ZOHO_CLIENT_SECRET'),
+        'redirect'      => env('ZOHO_REDIRECT_URI'),
+        'accounts_url'  => env('ZOHO_ACCOUNTS_URL'),
+        'api_base'      => env('ZOHO_API_BASE'),
+    ],
 ];
