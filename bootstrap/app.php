@@ -14,6 +14,8 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'internal.key' => \App\Http\Middleware\InternalApiKeyMiddleware::class,
+            'verify.ih.signature' => \App\Http\Middleware\VerifyIntegrationHubSignature::class,
+
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

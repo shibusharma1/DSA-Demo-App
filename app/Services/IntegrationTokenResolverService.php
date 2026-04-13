@@ -9,7 +9,8 @@ class IntegrationTokenResolverService
 {
     public function __construct(
         private IntegrationAccountService $accountService,
-        private ERPTokenService $erpTokenService
+        private ERPTokenService $erpTokenService,
+        private ZohoTokenService $zohoTokenService
     ) {}
 
     public function resolve(
@@ -43,6 +44,20 @@ class IntegrationTokenResolverService
             }
 
             // refresh token may update DB, so re-fetch latest
+            return $account->fresh();
+        }
+        if ($provider === 'zoho') {
+
+            if ($account->isTokenExpired()) {
+
+                $token = $this->zohoTokenService->refreshToken($account);
+
+                if (!$token['success']) {
+                    Log::error('Zoho token refresh failed');
+                    return null;
+                }
+            }
+
             return $account->fresh();
         }
 
