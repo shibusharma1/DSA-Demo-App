@@ -7,59 +7,64 @@ use Illuminate\Http\Request;
 
 class ProductController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        //
+        $products = Product::latest()->paginate(10);
+        return view('products.index', compact('products'));
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
     public function create()
     {
-        //
+        return view('products.create');
     }
 
-    /**
-     * Store a newly created resource in storage.
-     */
     public function store(Request $request)
     {
-        //
+        $data = $request->validate([
+            'product_name' => 'required|string|max:255',
+            'product_code' => 'nullable|string|max:100',
+            'mrp'          => 'nullable|numeric',
+            'd_price'      => 'nullable|numeric',
+            'r_price'      => 'nullable|numeric',
+            'unit_name'    => 'nullable|string|max:100',
+            'inventory_available_quantity' => 'nullable|integer',
+            'status'       => 'required|string',
+        ]);
+
+        Product::create($data);
+
+        return redirect()->route('products.index')
+            ->with('success', 'Product created successfully.');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Product $product)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(Product $product)
     {
-        //
+        return view('products.edit', compact('product'));
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, Product $product)
     {
-        //
+        $data = $request->validate([
+            'product_name' => 'sometimes|required|string|max:255',
+            'product_code' => 'nullable|string|max:100',
+            'mrp'          => 'nullable|numeric',
+            'd_price'      => 'nullable|numeric',
+            'r_price'      => 'nullable|numeric',
+            'unit_name'    => 'nullable|string|max:100',
+            'inventory_available_quantity' => 'nullable|integer',
+            'status'       => 'required|string',
+        ]);
+
+        $product->update($data);
+
+        return redirect()->route('products.index')
+            ->with('success', 'Product updated successfully.');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Product $product)
     {
-        //
+        $product->delete();
+
+        return back()->with('success', 'Product deleted successfully.');
     }
 }

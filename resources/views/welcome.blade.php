@@ -26,10 +26,23 @@
     <header class="bg-primary text-white shadow-md">
         <div class="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
             <h1 class="text-2xl font-bold">Webhook Microservice App</h1>
-            <nav>
+            <nav class="g-2">
                 <a href="{{ url('/customers') }}"
-                    class="bg-white text-primary font-semibold px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">
+                    class="bg-white text-primary font-semibold mx-2 px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">
                     Customer List
+                </a>
+                           <a href="{{ url('/products') }}"
+                    class="bg-white text-primary font-semibold  mx-2 px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">
+                    Products List
+                </a>
+                      </a>
+                           <a href="{{ url('/customers') }}"
+                    class="bg-white text-primary font-semibold  mx-2 px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">
+                    Order List
+                </a>      </a>
+                           <a href="{{ url('/customers') }}"
+                    class="bg-white text-primary font-semibold  mx-2 px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">
+                    Collection List
                 </a>
             </nav>
         </div>
