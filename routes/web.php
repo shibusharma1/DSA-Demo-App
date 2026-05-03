@@ -5,6 +5,7 @@ use App\Http\Controllers\Company\Admin\ZohoOAuthController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ProductController;
+use App\Http\Controllers\OrderController;
 
 
 use Illuminate\Support\Facades\Route;
@@ -49,3 +50,10 @@ Route::post('/client', [ClientController::class, 'store'])->name('clients.store'
 Route::get('/client/{client}/edit', [ClientController::class, 'edit'])->name('clients.edit');
 Route::put('/client/{client}', [ClientController::class, 'update'])->name('clients.update');
 Route::delete('/client/{client}', [ClientController::class, 'destroy'])->name('clients.destroy');
+
+Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+Route::get('/order/create', [OrderController::class, 'create'])->name('orders.create');
+Route::post('/order', [OrderController::class, 'store'])->name('orders.store');
+Route::get('/order/{order}/edit', [OrderController::class, 'edit'])->name('orders.edit');
+Route::put('/order/{order}', [OrderController::class, 'update'])->name('orders.update');
+Route::delete('/order/{order}', [OrderController::class, 'destroy'])->name('orders.destroy');
