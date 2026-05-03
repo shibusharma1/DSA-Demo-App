@@ -3,6 +3,8 @@
 use App\Http\Controllers\Company\Admin\ERPNextOAuthController;
 use App\Http\Controllers\Company\Admin\ZohoOAuthController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\ProductController;
+
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -23,9 +25,18 @@ Route::prefix('zoho')->name('zoho.')->group(function () {
 });
 
 // Customer CRUD
+
 Route::get('/customers', [CustomerController::class, 'index'])->name('customers.index');
 Route::get('/customer/create', [CustomerController::class, 'create'])->name('customers.create');
 Route::post('/customer', [CustomerController::class, 'store'])->name('customers.store');
 Route::get('/customer/{customer}/edit', [CustomerController::class, 'edit'])->name('customers.edit');
 Route::put('/customer/{customer}', [CustomerController::class, 'update'])->name('customers.update');
 Route::delete('/customer/{customer}', [CustomerController::class, 'destroy'])->name('customers.destroy');
+
+
+Route::get('/products', [ProductController::class, 'index'])->name('products.index');
+Route::get('/product/create', [ProductController::class, 'create'])->name('products.create');
+Route::post('/product', [ProductController::class, 'store'])->name('products.store');
+Route::get('/product/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
+Route::put('/product/{product}', [ProductController::class, 'update'])->name('products.update');
+Route::delete('/product/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
