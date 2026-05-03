@@ -1,15 +1,8 @@
-<!-- resources/views/products/index.blade.php -->
+@extends('layout.app')
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Products</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
+@push('title', 'Products List')
 
-<body class="bg-gray-50">
-
+@section('content')
 <div class="max-w-7xl mx-auto py-10">
 
     <div class="flex justify-between mb-6">
@@ -69,5 +62,4 @@
     </div>
 
 </div>
-</body>
-</html>
+@endsection
