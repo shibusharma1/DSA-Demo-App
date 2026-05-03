@@ -2,6 +2,8 @@
 
 // use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\Api\V1\IntegrationTokenController;
+// use App\Http\Controllers\Company\Admin\ERPNextOAuthController;
+use App\Http\Controllers\ERPNextController;
 // use Symfony\Component\Routing\Route;
 use Illuminate\Support\Facades\Route;
 // use App\Http\Controllers\Integration\InboundController;
@@ -23,3 +25,6 @@ use App\Http\Controllers\Integration\SyncIdController;
 
 Route::post('/integration/sync-ids', [SyncIdController::class, 'handle'])
     ->middleware('verify.ih.signature');
+
+
+Route::post('erpnext/customer',[ERPNextController::class,'store'])->name('erpnext.store');
