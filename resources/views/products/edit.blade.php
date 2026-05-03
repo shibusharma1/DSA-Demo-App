@@ -1,15 +1,8 @@
-<!-- resources/views/products/edit.blade.php -->
+@extends('layout.app')
 
-<!DOCTYPE html>
-<html lang="en">
+@push('title', 'Edit Products')
 
-<head>
-    <meta charset="UTF-8">
-    <title>Edit Product</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-
-<body class="bg-gray-50">
+@section('content')
 
     <div class="max-w-3xl mx-auto py-10">
 
@@ -44,6 +37,4 @@
         </form>
 
     </div>
-</body>
-
-</html>
+@endsection

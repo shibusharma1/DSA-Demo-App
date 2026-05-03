@@ -19,7 +19,7 @@ class CustomerController extends Controller
     public function index()
     {
         $customers = Customer::latest()->paginate(10);
-        return view('indexCustomer', compact('customers'));
+        return view('customers.index', compact('customers'));
     }
 
     /**
@@ -27,7 +27,7 @@ class CustomerController extends Controller
      */
     public function create()
     {
-        return view('createCustomer');
+        return view('customers.create');
     }
 
     /**
@@ -56,7 +56,7 @@ class CustomerController extends Controller
      */
     public function edit(Customer $customer)
     {
-        return view('editCustomer', compact('customer'));
+        return view('customers.edit', compact('customer'));
     }
 
     /**

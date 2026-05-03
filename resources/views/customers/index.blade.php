@@ -1,37 +1,8 @@
-<!DOCTYPE html>
-<html lang="en">
+@extends('layout.app')
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Customers</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#009688',
-                    },
-                },
-            },
-        }
-    </script>
-</head>
+@push('title', 'Customer List')
 
-<body class="bg-gray-50 text-gray-800">
-    <!-- Header -->
-    <header class="bg-primary text-white shadow-md">
-        <div class="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
-            <h1 class="text-2xl font-bold">Webhook Microservice App</h1>
-            <nav>
-                <a href="{{ url('/customers') }}"
-                    class="bg-white text-primary font-semibold px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">
-                    Customer List
-                </a>
-            </nav>
-        </div>
-    </header>
+@section('content')
 
     <div class="max-w-5xl mx-auto py-12">
         <div class="flex items-center justify-between mb-6">
@@ -93,14 +64,4 @@
             {{ $customers->links() }}
         </div>
     </div>
-
-    <!-- Footer -->
-    <footer class="bg-gray-100 text-gray-600 py-6">
-        <div class="max-w-7xl mx-auto px-4 text-center">
-            &copy; 2026 Shibu Sharma. All rights reserved.
-        </div>
-    </footer>
-
-</body>
-
-</html>
+@endsection

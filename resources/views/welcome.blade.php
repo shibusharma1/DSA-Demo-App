@@ -1,56 +1,10 @@
-<!DOCTYPE html>
-<html lang="en">
+@extends('layout.app')
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="X-UA-Compatible" content="ie=edge">
-    <title>Webhook Microservice App</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>
-        tailwind.config = {
-            theme: {
-                extend: {
-                    colors: {
-                        primary: '#009688',
-                    },
-                },
-            },
-        }
-    </script>
-</head>
+@push('title', 'Home')
 
-<body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
-
-    <!-- Header -->
-    <header class="bg-primary text-white shadow-md">
-        <div class="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
-            <h1 class="text-2xl font-bold">Webhook Microservice App</h1>
-            <nav class="g-2">
-                <a href="{{ url('/customers') }}"
-                    class="bg-white text-primary font-semibold mx-2 px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">
-                    Customer List
-                </a>
-                           <a href="{{ url('/products') }}"
-                    class="bg-white text-primary font-semibold  mx-2 px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">
-                    Products List
-                </a>
-                      </a>
-                           <a href="{{ url('/customers') }}"
-                    class="bg-white text-primary font-semibold  mx-2 px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">
-                    Order List
-                </a>      </a>
-                           <a href="{{ url('/customers') }}"
-                    class="bg-white text-primary font-semibold  mx-2 px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">
-                    Collection List
-                </a>
-            </nav>
-        </div>
-    </header>
-
+@section('content')
     <!-- Hero Section -->
-    <section
-        class="flex-1 flex items-center justify-center bg-gradient-to-r from-primary/80 to-primary/60 text-white py-20">
+    <section class="flex-1 flex items-center justify-center bg-gradient-to-r from-primary/80 to-primary/60 text-white py-20">
         <div class="text-center px-4 md:px-0 max-w-2xl">
             <h2 class="text-4xl md:text-5xl font-extrabold mb-4">Welcome to Our Webhook Service</h2>
             <p class="text-lg md:text-xl mb-6">
@@ -155,13 +109,4 @@
         </a>
     </section>
 
-    <!-- Footer -->
-    <footer class="bg-gray-100 text-gray-600 py-6">
-        <div class="max-w-7xl mx-auto px-4 text-center">
-            &copy; 2026 Shibu Sharma. All rights reserved.
-        </div>
-    </footer>
-
-</body>
-
-</html>
+@endsection

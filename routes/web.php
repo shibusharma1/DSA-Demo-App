@@ -3,7 +3,9 @@
 use App\Http\Controllers\Company\Admin\ERPNextOAuthController;
 use App\Http\Controllers\Company\Admin\ZohoOAuthController;
 use App\Http\Controllers\CustomerController;
+use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ProductController;
+
 
 use Illuminate\Support\Facades\Route;
 
@@ -40,3 +42,10 @@ Route::post('/product', [ProductController::class, 'store'])->name('products.sto
 Route::get('/product/{product}/edit', [ProductController::class, 'edit'])->name('products.edit');
 Route::put('/product/{product}', [ProductController::class, 'update'])->name('products.update');
 Route::delete('/product/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
+
+Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
+Route::get('/client/create', [ClientController::class, 'create'])->name('clients.create');
+Route::post('/client', [ClientController::class, 'store'])->name('clients.store');
+Route::get('/client/{client}/edit', [ClientController::class, 'edit'])->name('clients.edit');
+Route::put('/client/{client}', [ClientController::class, 'update'])->name('clients.update');
+Route::delete('/client/{client}', [ClientController::class, 'destroy'])->name('clients.destroy');
