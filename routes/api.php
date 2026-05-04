@@ -1,18 +1,8 @@
 <?php
 
-// use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\Api\V1\IntegrationTokenController;
-// use App\Http\Controllers\Company\Admin\ERPNextOAuthController;
-use App\Http\Controllers\ERPNextController;
-// use Symfony\Component\Routing\Route;
+use App\Http\Controllers\Company\Admin\ERPNextOAuthController;
 use Illuminate\Support\Facades\Route;
-// use App\Http\Controllers\Integration\InboundController;
-
-
-
-
-// Route::patch('/customers/{customer}/zb-id', [CustomerController::class, 'updateZbId']);
-
 
 Route::prefix('v1')
     ->middleware(['internal.key'])
@@ -20,11 +10,9 @@ Route::prefix('v1')
         Route::get('/integrations/token', [IntegrationTokenController::class, 'show']);
     });
 
-// Route::post('/integration/inbound', InboundController::class);
 use App\Http\Controllers\Integration\SyncIdController;
 
 Route::post('/integration/sync-ids', [SyncIdController::class, 'handle'])
     ->middleware('verify.ih.signature');
 
-
-Route::post('erpnext/customer',[ERPNextController::class,'store'])->name('erpnext.store');
+Route::post('erpnext/customer',[ERPNextOAuthController::class,'store'])->name('erpnext.store');

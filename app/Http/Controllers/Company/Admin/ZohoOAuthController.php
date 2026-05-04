@@ -52,7 +52,7 @@ class ZohoOAuthController extends Controller
             'query' => $request->all(),
         ]);
 
-        // ❌ Handle errors from Zoho
+        // Handle errors from Zoho
         if ($request->has('error')) {
             return response()->json([
                 'success' => false,
@@ -61,7 +61,7 @@ class ZohoOAuthController extends Controller
             ], 400);
         }
 
-        // ✅ Validate state
+        // Validate state
         $state = $request->get('state');
         $savedState = Session::get('zoho_oauth_state');
 
@@ -87,7 +87,7 @@ class ZohoOAuthController extends Controller
         }
 
         try {
-            // 🔥 STEP 1: Exchange code for tokens
+            // STEP 1: Exchange code for tokens
             $tokenResponse = Http::asForm()->post(
                 config('services.zoho.accounts_url') . '/oauth/v2/token',
                 [
@@ -118,7 +118,7 @@ class ZohoOAuthController extends Controller
                 'has_refresh_token' => isset($tokens['refresh_token']),
             ]);
 
-            // 🔥 STEP 2: Fetch organization_id
+            // STEP 2: Fetch organization_id
             $orgResponse = Http::withToken($tokens['access_token'])
                 ->get(config('services.zoho.api_base') . '/books/v3/organizations');
 
@@ -153,7 +153,7 @@ class ZohoOAuthController extends Controller
                 'organization_id' => $organizationId,
             ]);
 
-            // 🔥 STEP 3: Save to DB
+            // STEP 3: Save to DB
             $account = $this->accountService->saveTokenResponse([
                 'company_id'      => 1,
                 'user_id'         => 1,
@@ -173,7 +173,7 @@ class ZohoOAuthController extends Controller
                 ],
             ]);
 
-            // 🔥 Clean session
+            // Clean session
             Session::forget('zoho_oauth_state');
 
             Log::info('Zoho account saved successfully', [

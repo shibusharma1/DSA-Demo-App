@@ -23,6 +23,6 @@
     </script>
 </head>
 
-<body class="bg-gray-50 text-gray-800 flex flex-col min-h-screen">
+<body>
 
     

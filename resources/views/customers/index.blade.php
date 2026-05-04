@@ -21,7 +21,7 @@
             </div>
         @endif
 
-        <div class="bg-white shadow-md rounded-lg overflow-hidden">
+        <div class="bg-white shadow-md rounded-lg overflow-scroll">
             <table class="min-w-full leading-normal">
                 <thead>
                     <tr class="bg-primary text-white">
@@ -30,6 +30,7 @@
                         <th class="px-5 py-3 text-left text-sm font-semibold uppercase">Email</th>
                         <th class="px-5 py-3 text-left text-sm font-semibold uppercase">Company</th>
                         <th class="px-5 py-3 text-left text-sm font-semibold uppercase">Phone</th>
+                        <th class="px-5 py-3 text-left text-sm font-semibold uppercase">ERPNext Id</th>
                         <th class="px-5 py-3 text-left text-sm font-semibold uppercase">Zoho Book Id</th>
                         <th class="px-5 py-3 text-left text-sm font-semibold uppercase">Actions</th>
                     </tr>
@@ -42,7 +43,8 @@
                             <td class="px-5 py-3">{{ $customer->email }}</td>
                             <td class="px-5 py-3">{{ $customer->company_name ?? '-' }}</td>
                             <td class="px-5 py-3">{{ $customer->phone ?? '-' }}</td>
-                            <td class="px-5 py-3">{{ $customer->zb_id ?? '-' }}</td>
+                            <td class="px-5 py-3">{{ $customer->erpnext_id ?? '-' }}</td>
+                            <td class="px-5 py-3">{{ $customer->zoho_id ?? '-' }}</td>
                             <td class="px-5 py-3 flex space-x-2">
                                 <a href="{{ route('customers.edit', $customer->id) }}"
                                     class="bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded">Edit</a>
