@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Customer;
+use App\Models\Order;
+use App\Models\Product;
 use Illuminate\Support\Facades\Log;
 
 class SyncIdService
@@ -21,9 +23,9 @@ class SyncIdService
     private array $modelMap = [
         'customer'    => Customer::class,
         // 'invoice'     => \App\Models\Invoice::class,
-        // 'payment'     => \App\Models\Payment::class,
-        // 'sales_order' => \App\Models\SalesOrder::class,
-        // 'item'        => \App\Models\Item::class,
+        'payment'     => \App\Models\Payment::class,
+        'sales_order' => Order::class,
+        'item'        => Product::class,
     ];
 
     public function save(

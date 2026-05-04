@@ -10,23 +10,23 @@
         <nav class="g-2">
             <a href="{{ url('/customers') }}"
                 class="bg-white text-primary font-semibold mx-2 px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">
-                Customer List
+                Client List
             </a>
             <a href="{{ url('/products') }}"
                 class="bg-white text-primary font-semibold  mx-2 px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">
-                Products List
+                Products/Item List
             </a>
-
+{{-- 
             <a href="{{ url('/clients') }}"
                 class="bg-white text-primary font-semibold  mx-2 px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">
                 clients List
-            </a>
+            </a> --}}
 
             <a href="{{ url('/orders') }}"
                 class="bg-white text-primary font-semibold  mx-2 px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">
-                Order List
+                Order List(One way sync only DSA -> ERPNEXT)
             </a>
-            <a href="{{ url('/collections') }}"
+            <a href="{{ url('/payments') }}"
                 class="bg-white text-primary font-semibold  mx-2 px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">
                 Collection List
             </a>

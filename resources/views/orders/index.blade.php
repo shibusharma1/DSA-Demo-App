@@ -5,7 +5,8 @@
 @section('content')
     <!-- resources/views/orders/index.blade.php -->
 
-    <div class="py-10">
+        <div class="max-w-5xl mx-auto py-12">
+
 
         <div class="flex justify-between mb-6">
             <h1 class="text-2xl font-bold text-teal-600">Orders</h1>
