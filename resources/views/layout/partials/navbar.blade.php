@@ -16,6 +16,7 @@
                 class="bg-white text-primary font-semibold  mx-2 px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">
                 Products/Item List
             </a>
+            
 {{-- 
             <a href="{{ url('/clients') }}"
                 class="bg-white text-primary font-semibold  mx-2 px-4 py-2 rounded-md shadow hover:bg-gray-100 transition">

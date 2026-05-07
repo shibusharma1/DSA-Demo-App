@@ -13,12 +13,12 @@
             @endforeach
         </select>
 
-        <select name="order_id" class="w-full border p-2 mb-3">
+        {{-- <select name="order_id" class="w-full border p-2 mb-3">
             <option value="">Select Order</option>
             @foreach ($orders as $order)
                 <option value="{{ $order->id }}">{{ $order->order_no }}</option>
             @endforeach
-        </select>
+        </select> --}}
 
         <input type="number" name="payment_received" placeholder="Amount" class="w-full border p-2 mb-3">
 

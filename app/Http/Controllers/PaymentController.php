@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Payment;
 use App\Models\Client;
-use App\Models\Order;
+// use App\Models\Order;
 use Illuminate\Http\Request;
 // use Log;
 
@@ -19,18 +19,14 @@ class PaymentController extends Controller
     public function create()
     {
         $clients = Client::all();
-        $orders  = Order::all();
 
-        // Log::info($orders);
-
-        return view('payments.create', compact('clients', 'orders'));
+        return view('payments.create', compact('clients'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
             'client_id'         => 'required',
-            'order_id'          => 'nullable',
             'payment_received'  => 'required|numeric',
             'payment_method'    => 'nullable|string',
             'payment_date'      => 'required|date',
@@ -46,16 +42,14 @@ class PaymentController extends Controller
     public function edit(Payment $payment)
     {
         $clients = Client::all();
-        $orders  = Order::all();
 
-        return view('payments.edit', compact('payment', 'clients', 'orders'));
+        return view('payments.edit', compact('payment', 'clients'));
     }
 
     public function update(Request $request, Payment $payment)
     {
         $data = $request->validate([
             'client_id'         => 'required',
-            'order_id'          => 'nullable',
             'payment_received'  => 'required|numeric',
             'payment_method'    => 'nullable|string',
             'payment_date'      => 'required|date',

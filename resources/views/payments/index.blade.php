@@ -27,6 +27,7 @@
                     <th class="p-3">Method</th>
                     <th class="p-3">Date</th>
                     <th class="p-3">Status</th>
+                    <th class="p-3">ERPNEXT ID</th>
                     <th class="p-3">Actions</th>
                 </tr>
             </thead>
@@ -39,6 +40,7 @@
                         <td class="p-3">{{ $payment->payment_method }}</td>
                         <td class="p-3">{{ $payment->payment_date }}</td>
                         <td class="p-3">{{ $payment->payment_status }}</td>
+                        <td class="p-3">{{ $payment->erpnext_id }}</td>
 
                         <td class="p-3 flex gap-2">
                             <a href="{{ route('payments.edit', $payment->id) }}"

@@ -3,8 +3,10 @@
 namespace App\Providers;
 
 use App\Models\Customer;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Observers\CustomerObserver;
+use App\Observers\PaymentObserver;
 use App\Observers\ProductObserver;
 use Illuminate\Support\ServiceProvider;
 
@@ -25,5 +27,6 @@ class AppServiceProvider extends ServiceProvider
     {
         Customer::observe(CustomerObserver::class);
         Product::observe(ProductObserver::class);
+        Payment::observe(PaymentObserver::class);
     }
 }
