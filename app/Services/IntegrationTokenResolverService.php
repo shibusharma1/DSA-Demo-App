@@ -46,6 +46,7 @@ class IntegrationTokenResolverService
             // refresh token may update DB, so re-fetch latest
             return $account->fresh();
         }
+        
         if ($provider === 'zoho') {
 
             if ($account->isTokenExpired()) {
