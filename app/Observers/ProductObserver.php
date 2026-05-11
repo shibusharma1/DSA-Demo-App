@@ -15,7 +15,9 @@ class ProductObserver
             eventType:  'item.created',
             entityType: 'item',
             entityId:   $product->id,
-            payload:    $product->toArray(),
+            payload:    [
+                'data' => $product->toArray()
+            ],
         );
     }
 
@@ -25,7 +27,9 @@ class ProductObserver
             eventType:  'item.updated',
             entityType: 'item',
             entityId:   $product->id,
-            payload:    $product->toArray(),
+            payload:    [
+                'data' => $product->toArray()
+            ],
         );
     }
 

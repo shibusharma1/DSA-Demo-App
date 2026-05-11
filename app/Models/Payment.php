@@ -11,7 +11,7 @@ class Payment extends Model
 
     protected $fillable = [
         'company_id',
-        'client_id',
+        'customer_id',
         'order_id',
         'payment_received',
         'due_payment',
@@ -29,9 +29,9 @@ class Payment extends Model
         'sap_id'
     ];
 
-    public function client()
+    public function customer()
     {
-        return $this->belongsTo(Client::class);
+        return $this->belongsTo(Customer::class);
     }
 
     public function order()

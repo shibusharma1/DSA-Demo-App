@@ -35,7 +35,7 @@
             <tbody>
                 @foreach ($payments as $payment)
                     <tr class="border-b">
-                        <td class="p-3">{{ $payment->client->name ?? '' }}</td>
+                        <td class="p-3">{{ $payment->customer->contact_name ?? '' }}</td>
                         <td class="p-3">{{ $payment->payment_received }}</td>
                         <td class="p-3">{{ $payment->payment_method }}</td>
                         <td class="p-3">{{ $payment->payment_date }}</td>

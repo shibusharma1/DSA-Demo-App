@@ -19,7 +19,7 @@
         @foreach ($orders as $order)
             <div class="bg-white p-4 mb-3 shadow rounded">
                 <p><strong>Order #:</strong> {{ $order->order_no }}</p>
-                <p><strong>Client:</strong> {{ $order->client->name ?? '' }}</p>
+                <p><strong>Client:</strong> {{ $order->customer->contact_name ?? '' }}</p>
                 <p><strong>Total:</strong> {{ $order->grand_total }}</p>
                 <p><strong>Status:</strong> {{ $order->delivery_status }}</p>
             </div>

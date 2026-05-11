@@ -12,30 +12,34 @@ class CustomerObserver
     public function created(Customer $customer): void
     {
         $this->hub->fireEvent(
-            eventType:  'customer.created',
+            eventType: 'customer.created',
             entityType: 'customer',
-            entityId:   $customer->id,
-            payload:    $customer->toArray(),
+            entityId: $customer->id,
+            payload: [
+                'client' => $customer->toArray()
+            ],
         );
     }
 
     public function updated(Customer $customer): void
     {
         $this->hub->fireEvent(
-            eventType:  'customer.updated',
+            eventType: 'customer.updated',
             entityType: 'customer',
-            entityId:   $customer->id,
-            payload:    $customer->toArray(),
+            entityId: $customer->id,
+            payload: [
+                'client' => $customer->toArray()
+            ],
         );
     }
 
     public function deleted(Customer $customer): void
     {
         $this->hub->fireEvent(
-            eventType:  'customer.deleted',
+            eventType: 'customer.deleted',
             entityType: 'customer',
-            entityId:   $customer->id,
-            payload:    ['id' => $customer->id],
+            entityId: $customer->id,
+            payload: ['id' => $customer->id],
         );
     }
 }

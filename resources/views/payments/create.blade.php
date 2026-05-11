@@ -7,9 +7,9 @@
     <form method="POST" action="{{ route('payments.store') }}" class="max-w-4xl mx-auto my-3 bg-white p-6 shadow">
         @csrf
 
-        <select name="client_id" class="w-full border p-2 mb-3">
-            @foreach ($clients as $client)
-                <option value="{{ $client->id }}">{{ $client->name }}</option>
+        <select name="customer_id" class="w-full border p-2 mb-3">
+            @foreach ($customers as $customer)
+                <option value="{{ $customer->id }}">{{ $customer->contact_name }}</option>
             @endforeach
         </select>
 
@@ -22,7 +22,8 @@
 
         <input type="number" name="payment_received" placeholder="Amount" class="w-full border p-2 mb-3">
 
-        <input type="date" name="payment_date" class="w-full border p-2 mb-3">
+       <input type="date" name="payment_date" class="w-full border p-2 mb-3"
+       value="{{ \Carbon\Carbon::now()->format('Y-m-d') }}">
 
         <select name="payment_method" class="w-full border p-2 mb-3">
             <option>Cash</option>
