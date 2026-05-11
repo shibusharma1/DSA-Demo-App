@@ -1,9 +1,10 @@
 <?php
-// DSA: app/Services/SyncIdService.php
+
 namespace App\Services;
 
 use App\Models\Customer;
 use App\Models\Order;
+use App\Models\Payment;
 use App\Models\Product;
 use Illuminate\Support\Facades\Log;
 
@@ -22,8 +23,7 @@ class SyncIdService
     // Map entity type → model class
     private array $modelMap = [
         'customer'    => Customer::class,
-        // 'invoice'     => \App\Models\Invoice::class,
-        'payment'     => \App\Models\Payment::class,
+        'payment'     => Payment::class,
         'sales_order' => Order::class,
         'item'        => Product::class,
     ];
@@ -33,8 +33,10 @@ class SyncIdService
         string $entityType,
         int    $entityId,
         string $remoteId,
-        int    $companyId
+        int    $companyId,
+
     ): bool {
+
         $column = $this->columnMap[$connectorSlug] ?? null;
         $model  = $this->modelMap[$entityType]     ?? null;
 
@@ -52,7 +54,6 @@ class SyncIdService
             return false;
         }
 
-        Log::info($model);
         $record = $model::find($entityId);
 
         if (!$record) {
@@ -64,14 +65,6 @@ class SyncIdService
         }
 
         $record->update([$column => $remoteId]);
-
-        Log::info('SyncIdService: remote ID saved', [
-            'entity_type'    => $entityType,
-            'entity_id'      => $entityId,
-            'connector_slug' => $connectorSlug,
-            'column'         => $column,
-            'remote_id'      => $remoteId,
-        ]);
 
         return true;
     }

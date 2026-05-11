@@ -1,5 +1,5 @@
 <?php
-// DSA: app/Http/Controllers/Integration/SyncIdController.php
+
 namespace App\Http\Controllers\Integration;
 
 use App\Http\Controllers\Controller;
@@ -25,10 +25,10 @@ class SyncIdController extends Controller
 
         $saved = $this->syncIdService->save(
             connectorSlug: $validated['connector_slug'],
-            entityType:    $validated['entity_type'],
-            entityId:      (int) $validated['entity_id'],
-            remoteId:      $validated['remote_id'],
-            companyId:     (int) $validated['company_id'],
+            entityType: $validated['entity_type'],
+            entityId: (int) $validated['entity_id'],
+            remoteId: $validated['remote_id'],
+            companyId: (int) $validated['company_id'],
         );
 
         if ($saved) {

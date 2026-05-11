@@ -15,7 +15,19 @@ class PaymentObserver
             eventType: 'payment.created',
             entityType: 'payment',
             entityId: $payment->id,
-            payload: $payment->toArray(),
+            payload: [
+                'data' => $payment->toArray(),
+
+                'customer' => [
+                    'id'           => $payment->customer->id ?? null,
+                    'zoho_id'      => $payment->customer->zoho_id ?? null,
+                    'erpnext_id'   => $payment->customer->erpnext_id ?? null,
+                    'tally_id'     => $payment->customer->tally_id ?? null,
+                    'quickbooks_id' => $payment->customer->quickbooks_id ?? null,
+                    'busy_id'      => $payment->customer->busy_id ?? null,
+                    'sap_id'       => $payment->customer->sap_id ?? null,
+                ],
+            ],
         );
     }
 
@@ -25,7 +37,19 @@ class PaymentObserver
             eventType: 'payment.updated',
             entityType: 'payment',
             entityId: $payment->id,
-            payload: $payment->toArray(),
+            payload: [
+                'data' => $payment->toArray(),
+
+                'customer' => $payment->customer?->only([
+                    'id',
+                    'zoho_id',
+                    'erpnext_id',
+                    'tally_id',
+                    'quickbooks_id',
+                    'busy_id',
+                    'sap_id',
+                ]),
+            ],
         );
     }
 

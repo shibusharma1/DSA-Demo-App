@@ -36,7 +36,6 @@ class InboundSyncService
         try {
             return match ($entityType) {
                 'customer' => $this->syncCustomer($source, $eventType, $entityId, $isNew, $payload),
-                'invoice'  => $this->syncInvoice($source, $eventType, $entityId, $isNew, $payload),
                 'payment'  => $this->syncPayment($source, $eventType, $entityId, $isNew, $payload),
                 default    => [
                     'success'   => false,
@@ -172,63 +171,6 @@ class InboundSyncService
         return ['success' => true, 'entity_id' => $customer->id, 'message' => 'Customer updated'];
     }
 
-    private function syncInvoice(
-        string $source,
-        string $eventType,
-        int    $entityId,
-        bool   $isNew,
-        array  $payload
-    ): array {
-        $idColumn = $this->idColumnMap[$source] ?? null;
-        $remoteId = $payload[$source . '_id'] ?? $payload['remote_id'] ?? null;
-
-        if (str_contains($eventType, '.deleted')) {
-            \App\Models\Invoice::find($entityId)?->delete();
-            return ['success' => true, 'entity_id' => $entityId, 'message' => 'Invoice deleted'];
-        }
-
-        if ($isNew) {
-            if ($idColumn && $remoteId) {
-                $existing = \App\Models\Invoice::where($idColumn, $remoteId)->first();
-                if ($existing) {
-                    return ['success' => true, 'entity_id' => $existing->id, 'message' => 'Already exists'];
-                }
-            }
-
-            $createData = [
-                'invoice_number' => $payload['invoice_number'] ?? null,
-                'total'          => $payload['total']          ?? 0,
-                'date'           => $payload['date']           ?? now()->toDateString(),
-                'status'         => $payload['status']         ?? 'draft',
-            ];
-
-            if ($idColumn && $remoteId) {
-                $createData[$idColumn] = $remoteId;
-            }
-
-            $invoice = \App\Models\Invoice::create($createData);
-
-            return ['success' => true, 'entity_id' => $invoice->id, 'message' => 'Invoice created'];
-        }
-
-        $invoice = \App\Models\Invoice::find($entityId);
-        if (!$invoice) {
-            return ['success' => false, 'entity_id' => 0, 'message' => "Invoice #{$entityId} not found"];
-        }
-
-        $updateData = [];
-        if (!empty($payload['total']))  $updateData['total']  = $payload['total'];
-        if (!empty($payload['status'])) $updateData['status'] = $payload['status'];
-        if ($idColumn && $remoteId && !$invoice->{$idColumn}) {
-            $updateData[$idColumn] = $remoteId;
-        }
-
-        if (!empty($updateData)) {
-            $invoice->update($updateData);
-        }
-
-        return ['success' => true, 'entity_id' => $invoice->id, 'message' => 'Invoice updated'];
-    }
 
     private function syncPayment(
         string $source,

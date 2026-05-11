@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
 
             $table->integer('company_id')->nullable();
-            $table->foreignId('client_id')->nullable()->constrained()->nullOnDelete();
+            $table->foreignId('customer_id')->nullable()->constrained()->nullOnDelete();
             $table->foreignId('order_id')->nullable()->constrained()->nullOnDelete();
 
             $table->decimal('payment_received', 12, 2)->default(0);

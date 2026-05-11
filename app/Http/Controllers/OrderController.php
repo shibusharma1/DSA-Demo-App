@@ -4,27 +4,27 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderItem;
-use App\Models\Client;
+use App\Models\Customer;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
     public function index()
     {
-        $orders = Order::with('client')->latest()->paginate(10);
+        $orders = Order::with('customer')->latest()->paginate(10);
         return view('orders.index', compact('orders'));
     }
 
     public function create()
     {
-        $clients = Client::all();
-        return view('orders.create', compact('clients'));
+        $customers = Customer::orderBy('id','desc')->get();
+        return view('orders.create', compact('customers'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'client_id' => 'required',
+            'customer_id' => 'required',
             'order_date' => 'required|date',
             'due_date' => 'nullable|date',
             'order_note' => 'nullable',
@@ -61,14 +61,14 @@ class OrderController extends Controller
     public function edit(Order $order)
     {
         $order->load('items');
-        $clients = Client::all();
+        $customers = Customer::orderBy('id','desc')->get();
 
-        return view('orders.edit', compact('order', 'clients'));
+        return view('orders.edit', compact('order', 'customers'));
     }
 
     public function update(Request $request, Order $order)
     {
-        $order->update($request->only('client_id','order_date','due_date','order_note'));
+        $order->update($request->only('customer_id','order_date','due_date','order_note'));
 
         $order->items()->delete();
 

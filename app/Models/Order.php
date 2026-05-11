@@ -12,7 +12,7 @@ class Order extends Model
 
     protected $fillable = [
         'company_id',
-        'client_id',
+        'customer_id',
         'order_no',
         'tot_amount',
         'grand_total',
@@ -21,7 +21,6 @@ class Order extends Model
         'order_date',
         'due_date',
         'delivery_status',
-        // 'zborder_id',
         'zoho_id',
         'erpnext_id',
         'tally_id',
@@ -34,8 +33,8 @@ class Order extends Model
         return $this->hasMany(OrderItem::class);
     }
 
-    public function client()
+    public function customer()
     {
-        return $this->belongsTo(Client::class);
+        return $this->belongsTo(Customer::class);
     }
 }

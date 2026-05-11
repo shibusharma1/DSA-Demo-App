@@ -72,7 +72,7 @@
 
             <!-- Unit -->
             <div class="mb-4">
-                <label class="block text-gray-700 font-bold mb-2">Unit</label>
+                <label class="block text-gray-700 font-bold mb-2">Unit(Nos)</label>
                 <input type="text" name="unit_name" value="{{ old('unit_name') }}"
                     class="shadow border rounded w-full py-2 px-3 focus:outline-none focus:shadow-outline"
                     placeholder="e.g. 32 KG">

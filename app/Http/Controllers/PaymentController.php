@@ -3,30 +3,28 @@
 namespace App\Http\Controllers;
 
 use App\Models\Payment;
-use App\Models\Client;
-// use App\Models\Order;
+use App\Models\Customer;
 use Illuminate\Http\Request;
-// use Log;
 
 class PaymentController extends Controller
 {
     public function index()
     {
-        $payments = Payment::with(['client', 'order'])->latest()->paginate(10);
+        $payments = Payment::with(['customer', 'order'])->latest()->paginate(10);
         return view('payments.index', compact('payments'));
     }
 
     public function create()
     {
-        $clients = Client::all();
+        $customers = Customer::orderBy('id','desc')->get();
 
-        return view('payments.create', compact('clients'));
+        return view('payments.create', compact('customers'));
     }
 
     public function store(Request $request)
     {
         $data = $request->validate([
-            'client_id'         => 'required',
+            'customer_id'         => 'required',
             'payment_received'  => 'required|numeric',
             'payment_method'    => 'nullable|string',
             'payment_date'      => 'required|date',
@@ -41,15 +39,15 @@ class PaymentController extends Controller
 
     public function edit(Payment $payment)
     {
-        $clients = Client::all();
+        $customers = Customer::orderBy('id','desc')->get();
 
-        return view('payments.edit', compact('payment', 'clients'));
+        return view('payments.edit', compact('payment', 'customers'));
     }
 
     public function update(Request $request, Payment $payment)
     {
         $data = $request->validate([
-            'client_id'         => 'required',
+            'customer_id'         => 'required',
             'payment_received'  => 'required|numeric',
             'payment_method'    => 'nullable|string',
             'payment_date'      => 'required|date',
