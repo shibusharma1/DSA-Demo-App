@@ -5,20 +5,22 @@ namespace App\Http\Controllers;
 use App\Models\Order;
 use App\Models\OrderItem;
 use App\Models\Customer;
+use App\Models\Product;
 use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
     public function index()
     {
-        $orders = Order::with('customer')->latest()->paginate(10);
+        $orders = Order::with('customer','items')->latest()->paginate(10);
         return view('orders.index', compact('orders'));
     }
 
     public function create()
     {
         $customers = Customer::orderBy('id','desc')->get();
-        return view('orders.create', compact('customers'));
+        $items = Product::orderBy('id','desc')->get();
+        return view('orders.create', compact('customers','items'));
     }
 
     public function store(Request $request)
@@ -39,7 +41,7 @@ class OrderController extends Controller
 
             OrderItem::create([
                 'order_id' => $order->id,
-                'product_name' => $item['product_name'],
+                'product_name' => $item['product_id'],
                 'rate' => $item['rate'],
                 'quantity' => $item['quantity'],
                 'amount' => $amount,
@@ -78,7 +80,7 @@ class OrderController extends Controller
             $amount = $item['rate'] * $item['quantity'];
 
             $order->items()->create([
-                'product_name' => $item['product_name'],
+                'product_name' => $item['product_id'],
                 'rate' => $item['rate'],
                 'quantity' => $item['quantity'],
                 'amount' => $amount,

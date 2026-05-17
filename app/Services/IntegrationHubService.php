@@ -32,7 +32,7 @@ class IntegrationHubService
                 ->useSecret('password')
                 ->dispatch();
 
-            Log::channel('frappy')->info('data dispatched');
+            Log::channel('frappy')->info('data dispatched',['payload'=>$payload]);
             return true;
         } catch (\Exception $e) {
             Log::error('Integration Hub unreachable', ['error' => $e->getMessage()]);

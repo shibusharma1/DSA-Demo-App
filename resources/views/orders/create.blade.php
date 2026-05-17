@@ -21,7 +21,12 @@
 
             <div id="items">
                 <div class="flex gap-2 mb-2">
-                    <input name="items[0][product_name]" placeholder="Product" class="border p-2">
+                    {{-- <input name="items[0][product_name]" placeholder="Product" class="border p-2"> --}}
+                    <select name="items[0][product_id]" class="w-full border p-2 mb-3">
+                        @foreach ($items as $item)
+                            <option value="{{ $item->id }}">{{ $item->product_name }}</option>
+                        @endforeach
+                    </select>
                     <input name="items[0][rate]" placeholder="Rate" class="border p-2">
                     <input name="items[0][quantity]" placeholder="Qty" class="border p-2">
                 </div>
