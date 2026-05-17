@@ -18,7 +18,7 @@ class InboundIntegrationController extends Controller
         $validated = $request->validate([
             'event_type'  => ['required', 'string'],
             'entity_type' => ['required', 'string'],
-            'entity_id'   => ['nullable', 'integer'],
+            'entity_id'   => ['nullable', 'string'],
             'source'      => ['required', 'string'],
             'is_new'      => ['required', 'boolean'],
             'payload'     => ['required', 'array'],
@@ -28,7 +28,7 @@ class InboundIntegrationController extends Controller
             source:     $validated['source'],
             eventType:  $validated['event_type'],
             entityType: $validated['entity_type'],
-            entityId:   (int) ($validated['entity_id'] ?? 0),
+            entityId:   $validated['entity_id'] ?? null,
             isNew:      (bool) $validated['is_new'],
             payload:    $validated['payload'],
         );

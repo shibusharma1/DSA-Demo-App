@@ -28,9 +28,14 @@ class Order extends Model
         'sap_id'
     ];
 
-    public function items()
+    public function order()
     {
-        return $this->hasMany(OrderItem::class);
+        return $this->belongsTo(Order::class);
+    }
+
+    public function product()
+    {
+        return $this->belongsTo(Product::class);
     }
 
     public function customer()
