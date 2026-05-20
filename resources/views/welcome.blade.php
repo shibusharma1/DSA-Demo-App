@@ -3,110 +3,144 @@
 @push('title', 'Home')
 
 @section('content')
-    <!-- Hero Section -->
-    <section class="flex-1 flex items-center justify-center bg-gradient-to-r from-primary/80 to-primary/60 text-white py-20">
-        <div class="text-center px-4 md:px-0 max-w-2xl">
-            <h2 class="text-4xl md:text-5xl font-extrabold mb-4">Welcome to Our Webhook Service</h2>
-            <p class="text-lg md:text-xl mb-6">
-                A scalable Laravel microservice architecture demonstrating REST APIs, webhook communication, and modular
-                backend services.
+
+<!-- Hero Section -->
+<section class="relative overflow-hidden bg-gradient-to-br from-primary via-primary/90 to-indigo-900 text-white">
+
+    <div class="absolute inset-0 opacity-10">
+        <div class="absolute top-0 left-0 w-96 h-96 bg-white rounded-full blur-3xl"></div>
+        <div class="absolute bottom-0 right-0 w-96 h-96 bg-blue-300 rounded-full blur-3xl"></div>
+    </div>
+
+    <div class="relative max-w-7xl mx-auto px-6 lg:px-8 py-28">
+
+        <div class="grid lg:grid-cols-2 gap-16 items-center">
+
+            <!-- Left -->
+            <div>
+
+                <span class="inline-flex items-center px-4 py-2 rounded-full bg-white/10 border border-white/20 text-sm font-medium mb-6">
+                    Enterprise Microservice Platform
+                </span>
+
+                <h1 class="text-5xl lg:text-6xl font-extrabold leading-tight mb-6">
+                    Modern Laravel
+                    <span class="text-blue-200">
+                        Webhook Architecture
+                    </span>
+                </h1>
+
+                <p class="text-lg text-gray-200 leading-relaxed mb-8">
+                    A scalable Laravel-based microservice ecosystem demonstrating
+                    REST API communication, webhook integration,
+                    modular backend services, and enterprise-grade architecture.
+                </p>
+
+                <div class="flex flex-wrap gap-4">
+
+                    <a href="{{ url('/customers') }}"
+                        class="bg-white text-primary px-7 py-4 rounded-xl font-semibold shadow-xl hover:scale-105 transition duration-300">
+                        Get Started
+                    </a>
+
+                    <a href="{{ url('/orders') }}"
+                        class="border border-white/30 px-7 py-4 rounded-xl font-semibold hover:bg-white/10 transition duration-300">
+                        View Orders
+                    </a>
+
+                </div>
+
+            </div>
+
+            <!-- Right -->
+            <div class="relative">
+
+                <div class="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl p-8 shadow-2xl">
+
+                    <div class="space-y-6">
+
+                        <div class="bg-white/10 rounded-2xl p-5">
+                            <h3 class="font-semibold text-lg mb-2">REST APIs</h3>
+                            <p class="text-gray-200 text-sm">
+                                High-performance API communication between services.
+                            </p>
+                        </div>
+
+                        <div class="bg-white/10 rounded-2xl p-5">
+                            <h3 class="font-semibold text-lg mb-2">Webhook Events</h3>
+                            <p class="text-gray-200 text-sm">
+                                Real-time event-driven integrations and notifications.
+                            </p>
+                        </div>
+
+                        <div class="bg-white/10 rounded-2xl p-5">
+                            <h3 class="font-semibold text-lg mb-2">Scalable Backend</h3>
+                            <p class="text-gray-200 text-sm">
+                                Modular architecture built for independent scaling.
+                            </p>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+</section>
+
+<!-- Features Section -->
+<section class="py-24 bg-gray-50">
+
+    <div class="max-w-7xl mx-auto px-6 lg:px-8">
+
+        <div class="text-center mb-16">
+            <h2 class="text-4xl font-bold text-gray-900 mb-4">
+                Core Features
+            </h2>
+
+            <p class="text-lg text-gray-600 max-w-3xl mx-auto">
+                Designed for enterprise-grade applications with scalable microservice architecture and real-time integrations.
             </p>
-            <a href="{{ url('/customers') }}"
-                class="inline-block bg-white text-primary font-semibold px-6 py-3 rounded-lg shadow-lg hover:bg-gray-100 transition">
-                Go to Customer list
-            </a>
         </div>
-    </section>
 
-    <!-- Features Section -->
-    <section class="py-20 bg-gray-50">
-        <div class="max-w-7xl mx-auto px-4">
-            <h3 class="text-3xl font-bold text-center mb-12">Key Features</h3>
-            <div class="grid md:grid-cols-3 gap-8">
-                <div class="bg-white shadow-lg rounded-lg p-6 text-center hover:scale-105 transition">
-                    <h4 class="text-xl font-semibold mb-2">Microservice Architecture</h4>
-                    <p>Independent services with modular design for better scalability and maintainability.</p>
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
+
+            @php
+                $features = [
+                    ['title' => 'Microservice Architecture', 'desc' => 'Independent modular services for scalability and maintainability.'],
+                    ['title' => 'REST API Communication', 'desc' => 'Seamless communication between services using APIs.'],
+                    ['title' => 'Webhook Integration', 'desc' => 'Real-time event-driven architecture and notifications.'],
+                    ['title' => 'Authentication & Security', 'desc' => 'Secure APIs with validation and protected endpoints.'],
+                    ['title' => 'Scalable Infrastructure', 'desc' => 'Designed for horizontal scaling and high availability.'],
+                    ['title' => 'Clean Codebase', 'desc' => 'Reusable modular code structure following best practices.'],
+                ];
+            @endphp
+
+            @foreach($features as $feature)
+                <div class="group bg-white rounded-3xl p-8 shadow-sm border border-gray-100 hover:shadow-2xl hover:-translate-y-2 transition duration-500">
+
+                    <div class="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mb-6">
+                        <div class="w-6 h-6 bg-primary rounded-full"></div>
+                    </div>
+
+                    <h3 class="text-xl font-bold text-gray-900 mb-3">
+                        {{ $feature['title'] }}
+                    </h3>
+
+                    <p class="text-gray-600 leading-relaxed">
+                        {{ $feature['desc'] }}
+                    </p>
+
                 </div>
-                <div class="bg-white shadow-lg rounded-lg p-6 text-center hover:scale-105 transition">
-                    <h4 class="text-xl font-semibold mb-2">REST API Communication</h4>
-                    <p>Services communicate via REST APIs, enabling seamless integration and API-driven development.</p>
-                </div>
-                <div class="bg-white shadow-lg rounded-lg p-6 text-center hover:scale-105 transition">
-                    <h4 class="text-xl font-semibold mb-2">Webhook Integration</h4>
-                    <p>Demonstrates webhook communication for event-driven architecture and real-time updates.</p>
-                </div>
-                <div class="bg-white shadow-lg rounded-lg p-6 text-center hover:scale-105 transition">
-                    <h4 class="text-xl font-semibold mb-2">Authentication & Security</h4>
-                    <p>Secure APIs with authentication and proper validation for data integrity and safety.</p>
-                </div>
-                <div class="bg-white shadow-lg rounded-lg p-6 text-center hover:scale-105 transition">
-                    <h4 class="text-xl font-semibold mb-2">Scalable Backend</h4>
-                    <p>Design that supports horizontal scaling and independent deployment of services.</p>
-                </div>
-                <div class="bg-white shadow-lg rounded-lg p-6 text-center hover:scale-105 transition">
-                    <h4 class="text-xl font-semibold mb-2">Clean Code Structure</h4>
-                    <p>Modular codebase with reusable components for efficient development and testing.</p>
-                </div>
-            </div>
+            @endforeach
+
         </div>
-    </section>
 
-    <!-- Architecture Section -->
-    <section class="py-20 bg-white">
-        <div class="max-w-7xl mx-auto px-4">
-            <h3 class="text-3xl font-bold text-center mb-12">Architecture Overview</h3>
-            <div class="flex justify-center">
-                <div class="bg-gray-50 rounded-lg p-8 shadow-lg max-w-4xl">
-                    <pre class="bg-gray-100 p-6 rounded-lg overflow-x-auto text-sm">
-                            Client / Frontend
-                                    |
-                            API Gateway
-                                    |
-                            ---------------------------------
-                            |               |               |
-                            User Service   Order Service   Payment Service
-                            |               |               |
-                            Database       Database        Database
-                    </pre>
-                    <p class="text-center mt-4 text-gray-700">Each service is independent, scalable, and communicates
-                        via APIs or events.</p>
-                </div>
-            </div>
-        </div>
-    </section>
+    </div>
 
-    <!-- APIs Section -->
-    <section class="py-20 bg-gray-50">
-        <div class="max-w-7xl mx-auto px-4">
-            <h3 class="text-3xl font-bold text-center mb-12">Available APIs</h3>
-            <div class="grid md:grid-cols-3 gap-8">
-                <div class="bg-white shadow-lg rounded-lg p-6 hover:scale-105 transition">
-                    <h4 class="text-xl font-semibold mb-2">Users API</h4>
-                    <p>GET /api/users → List of all users.</p>
-                    <p>POST /api/users → Create new user.</p>
-                </div>
-                <div class="bg-white shadow-lg rounded-lg p-6 hover:scale-105 transition">
-                    <h4 class="text-xl font-semibold mb-2">Orders API</h4>
-                    <p>GET /api/orders → List all orders.</p>
-                    <p>POST /api/orders → Create new order.</p>
-                </div>
-                <div class="bg-white shadow-lg rounded-lg p-6 hover:scale-105 transition">
-                    <h4 class="text-xl font-semibold mb-2">Webhook API</h4>
-                    <p>POST /api/webhook → Trigger webhook events for real-time communication.</p>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <!-- CTA Section -->
-    <section class="py-20 bg-primary text-white text-center">
-        <h3 class="text-3xl font-bold mb-6">Get Started Now</h3>
-        <p class="mb-6 max-w-2xl mx-auto">Experience a scalable microservice architecture with Laravel and explore
-            modular backend services with webhook integration.</p>
-        <a href="/customers"
-            class="inline-block bg-white text-primary font-semibold px-6 py-3 rounded-lg shadow-lg hover:bg-gray-100 transition">
-            Go to Customer Form
-        </a>
-    </section>
+</section>
 
 @endsection
