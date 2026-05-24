@@ -13,7 +13,6 @@ Route::prefix('v1')
 
 Route::post('/integration/inbound',[InboundIntegrationController::class,'handle']);
 
-Route::post('/integration/sync-ids', [SyncIdController::class, 'handle'])
-    ->middleware('verify.ih.signature');
+Route::post('/integration/sync-ids', [SyncIdController::class, 'handle']);
 
 

@@ -4,10 +4,11 @@ use App\Http\Controllers\Company\Admin\ERPNextOAuthController;
 use App\Http\Controllers\Company\Admin\ZohoOAuthController;
 use App\Http\Controllers\CustomerController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\CustomerSyncController;
 use App\Http\Controllers\ProductController;
 use App\Http\Controllers\OrderController;
 use App\Http\Controllers\PaymentController;
-
+use App\Http\Controllers\SyncController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -43,14 +44,6 @@ Route::get('/product/{product}/edit', [ProductController::class, 'edit'])->name(
 Route::put('/product/{product}', [ProductController::class, 'update'])->name('products.update');
 Route::delete('/product/{product}', [ProductController::class, 'destroy'])->name('products.destroy');
 
-//Client CRUD
-Route::get('/clients', [ClientController::class, 'index'])->name('clients.index');
-Route::get('/client/create', [ClientController::class, 'create'])->name('clients.create');
-Route::post('/client', [ClientController::class, 'store'])->name('clients.store');
-Route::get('/client/{client}/edit', [ClientController::class, 'edit'])->name('clients.edit');
-Route::put('/client/{client}', [ClientController::class, 'update'])->name('clients.update');
-Route::delete('/client/{client}', [ClientController::class, 'destroy'])->name('clients.destroy');
-
 //Order CRUD
 Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
 Route::get('/order/create', [OrderController::class, 'create'])->name('orders.create');
@@ -67,3 +60,13 @@ Route::get('/payment/{payment}/edit', [PaymentController::class, 'edit'])->name(
 Route::put('/payment/{payment}', [PaymentController::class, 'update'])->name('payments.update');
 Route::delete('/payment/{payment}', [PaymentController::class, 'destroy'])->name('payments.destroy');
 
+
+//job url to sync the customer
+
+Route::post('/sync/customers/start', [SyncController::class, 'syncCustomers']);
+
+Route::post('/sync/products/start', [SyncController::class, 'syncProducts']);
+
+Route::post('/sync/payments/start', [SyncController::class, 'syncPayments']);
+
+Route::post('/sync/sales-orders/start', [SyncController::class, 'syncSalesOrders']);
