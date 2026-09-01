@@ -16,44 +16,44 @@ class ERPNextOAuthController extends Controller
         private IntegrationAccountService $accountService
     ) {}
 
-    // Show the connect page with the OAuth button
-    public function showConnect()
-    {
-        $codeVerifier  = $this->generateCodeVerifier();
-        $codeChallenge = $this->generateCodeChallenge($codeVerifier);
-        $state         = Str::random(40);
+        // Show the connect page with the OAuth button
+        public function showConnect()
+        {
+            $codeVerifier  = $this->generateCodeVerifier();
+            $codeChallenge = $this->generateCodeChallenge($codeVerifier);
+            $state         = Str::random(40);
 
-        Session::put('erpnext_code_verifier', $codeVerifier);
-        Session::put('erpnext_oauth_state', $state);
+            Session::put('erpnext_code_verifier', $codeVerifier);
+            Session::put('erpnext_oauth_state', $state);
 
-        // Load all ERPNext config once (avoid repeated config() calls)
-        $config = config('erpnext');
+            // Load all ERPNext config once (avoid repeated config() calls)
+            $config = config('erpnext');
 
-        $redirectUri = $config['redirect_uri'];
-        $baseUrl     = $config['base_url'];
+            $redirectUri = $config['redirect_uri'];
+            $baseUrl     = $config['base_url'];
 
-        $params = http_build_query([
-            'client_id'             => $config['client_id'],  
-            'response_type'         => 'code',
-            'scope'                 => $config['scopes'],     
-            'redirect_uri'          => $redirectUri,
-            'state'                 => $state,
-            'code_challenge'        => $codeChallenge,
-            'code_challenge_method' => 'S256',
-        ], '', '&', PHP_QUERY_RFC3986);
+            $params = http_build_query([
+                'client_id'             => $config['client_id'],  
+                'response_type'         => 'code',
+                'scope'                 => $config['scopes'],     
+                'redirect_uri'          => $redirectUri,
+                'state'                 => $state,
+                'code_challenge'        => $codeChallenge,
+                'code_challenge_method' => 'S256',
+            ], '', '&', PHP_QUERY_RFC3986);
 
-        $authUrl = "{$baseUrl}/api/method/frappe.integrations.oauth2.authorize?{$params}";
+            $authUrl = "{$baseUrl}/api/method/frappe.integrations.oauth2.authorize?{$params}";
 
-        // Check if already connected
-        $account = $this->accountService->getActiveAccount('erpnext', 'erpnext_cloud');
+            // Check if already connected
+            $account = $this->accountService->getActiveAccount('erpnext', 'erpnext_cloud');
 
-        Log::channel('frappy')->info('ERPNext connect page loaded', [
-            'already_connected' => (bool) $account,
-            'auth_url'          => $authUrl,
-        ]);
+            Log::channel('frappy')->info('ERPNext connect page loaded', [
+                'already_connected' => (bool) $account,
+                'auth_url'          => $authUrl,
+            ]);
 
-        return view('erpnext.connect', compact('authUrl', 'redirectUri', 'account'));
-    }
+            return view('erpnext.connect', compact('authUrl', 'redirectUri', 'account'));
+        }
 
     // Handle OAuth callback from Frappe
     public function callback(Request $request)

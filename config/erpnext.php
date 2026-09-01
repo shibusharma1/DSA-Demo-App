@@ -1,5 +1,4 @@
 <?php
-// config/erpnext.php
 return [
     'base_url'      => env('ERPNEXT_BASE_URL', 'https://manjit.frappe.cloud'),
     'client_id'     => env('ERPNEXT_CLIENT_ID'),
