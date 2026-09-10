@@ -6,6 +6,8 @@ use App\Services\BusyApiService;
 use Attribute;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use App\Services\QuickBooks\Resolvers\CountryResolver;
+use App\Country;
 use Throwable;
 
 class BusyToDSAParty
@@ -228,7 +230,7 @@ class BusyToDSAParty
     // }
     private function createOrUpdateDsaParties(array $parties, int $company_id): array
     {
-        Log::info("Bhai sb data aa gaya yaha", [$parties]);
+        // Log::info("Bhai sb data aa gaya yaha", [$parties]);
         $inserted = 0;
         $updated = 0;
         $skipped = 0;
@@ -240,20 +242,30 @@ class BusyToDSAParty
                 $skipped++;
                 continue;
             }
+            $countryId = (!empty($party['country'])) ? CountryResolver::resolveId($party['country']) : null;
+
+            if ($countryId) {
+                $country_info = Country::find($countryId);
+                $phone_code = $country_info->phonecode ?? ''; // Or whatever field you need
+            }
             $data = [
                 'company_name' => $name,
-                'name' => $name,
+                'name' => !empty($party['contact']) ? trim((string) $party['contact']) : null,
                 'phone' => !empty($party['telephone']) ? trim((string) $party['telephone']) : null,
                 'mobile' => !empty($party['mobile']) ? trim((string) $party['mobile']) : null,
                 'fax' => !empty($party['fax']) ? trim((string) $party['fax']) : null,
                 'email' => !empty($party['email']) ? trim((string) $party['email']) : null,
                 'address_1' => $party['address1'] ?? null,
                 'address_2' => $party['address2'] ?? null,
-                'country' => $party['country'] ?? null,
+                // 'country' => $party['country'] ?? null,
+                'country' => $countryId ?? null,
+                'phonecode' => $phone_code ?? '',
                 'pan' => !empty($party['it_pan']) ? trim((string) $party['it_pan']) : null,
-                'gst_no' => !empty($party['gst_no']) ? trim((string) $party['gst_no']) : null,
+                // 'gst_no' => !empty($party['gst_no']) ? trim((string) $party['gst_no']) : null,
+                // '' => !empty($party['']) ? trim((string) $party['']) : null,
                 'credit_days' => is_numeric($party['credit_days_sale'] ?? null) ? (int) $party['credit_days_sale'] : null,
                 'opening_balance' => is_numeric($party['op_bal'] ?? null) ? (float) $party['op_bal'] : null,
+                'closing_balance' => is_numeric($party['py_bal'] ?? null) ? (float) $party['py_bal'] : null,
                 'status' => !empty($party['status']) ? trim((string) $party['status']) : null,
                 'updated_at' => now(),
             ];
