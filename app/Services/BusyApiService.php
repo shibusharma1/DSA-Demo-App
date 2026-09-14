@@ -16,8 +16,8 @@ class BusyApiService
     public function __construct()
     {
         $this->baseUrl = rtrim(config('services.busy.base_url'), 'http://127.0.0.1:981');
-        $this->username = config('services.busy.username', 'a');
-        $this->password = config('services.busy.password', 'a');
+        $this->username = config('services.busy.username', 'd');
+        $this->password = config('services.busy.password', 'd');
     }
 
     public function request(array $headers): array
@@ -155,7 +155,9 @@ class BusyApiService
     public function getCustomers(): array
     {
         $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 2 AND PARENTGRP = 116";
+        // $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 6 AND PARENTGRP = 401";
         $response = $this->executeQuery($query);
+        Log::info("Complete log yaha h",[$response]);
         if (!($response['success'] ?? false)) {
             return $response;
         }
@@ -305,6 +307,160 @@ class BusyApiService
             'parties' => $completeParties,
         ];
     }
+    // public function getCustomers(): array
+    // {
+    //     $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 2 AND PARENTGRP = 116";
+    //     // $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 6 AND PARENTGRP = 401";
+    //     $response = $this->executeQuery($query);
+    //     if (!($response['success'] ?? false)) {
+    //         return $response;
+    //     }
+    //     $body = $response['body'] ?? '';
+    //     if (trim($body) === '') {
+    //         return $response;
+    //     }
+    //     libxml_use_internal_errors(true);
+    //     $xml = simplexml_load_string($body);
+    //     if ($xml === false) {
+    //         Log::channel('busy')->error('Failed to parse BUSY customer list', [
+    //             'body' => $body,
+    //             'errors' => libxml_get_errors(),
+    //         ]);
+    //         libxml_clear_errors();
+    //         return $response;
+    //     }
+    //     $xml->registerXPathNamespace('z', '#RowsetSchema');
+    //     $rows = $xml->xpath('//z:row') ?: [];
+    //     $completeParties = [];
+    //     foreach ($rows as $row) {
+    //         $attributes = $row->attributes();
+    //         $masterCode = trim((string) ($attributes['Code'] ?? ''));
+    //         $name = trim((string) ($attributes['Name'] ?? ''));
+    //         if ($masterCode === '' || $name === '') {
+    //             continue;
+    //         }
+    //         /* Get complete customer/account details using BUSY GetMasterXML.*/
+    //         $masterResponse = $this->getMaster((int) $masterCode);
+    //         if (!($masterResponse['success'] ?? false)) {
+    //             Log::channel('busy')->warning('Failed to fetch complete BUSY party', [
+    //                 'master_code' => $masterCode,
+    //                 'name' => $name,
+    //                 'description' => $masterResponse['description'] ?? null,
+    //             ]);
+    //             /*
+    //          * Keeping the basic MASTER1 data even if complete XML fails.*/
+    //             $completeParties[] = [
+    //                 'master_code' => $masterCode,
+    //                 'name' => $name,
+    //                 'mobile' => null,
+    //                 'email' => null,
+    //                 'whatsapp_no' => null,
+    //                 'gst_no' => null,
+    //                 'address1' => null,
+    //                 'address2' => null,
+    //                 'telephone' => null,
+    //                 'fax' => null,
+    //                 'country' => null,
+    //                 'state' => null,
+    //                 'city' => null,
+    //                 'area' => null,
+    //                 'contact' => null,
+    //                 'it_pan' => null,
+    //                 'it_ward' => null,
+    //                 'tin_no' => null,
+    //                 'transport' => null,
+    //                 'station' => null,
+    //                 'account_no' => null,
+    //                 'parent_group' => null,
+    //                 'supplier_type' => null,
+    //                 'credit_days_sale' => null,
+    //                 'credit_days_purchase' => null,
+    //                 'price_level' => null,
+    //                 'price_level_purchase' => null,
+    //                 'tax_type' => null,
+    //                 'cheque_print_name' => null,
+    //                 'reverse_charge_type' => null,
+    //                 'input_type' => null,
+    //                 'status' => (($attributes['DeactiveMaster'] ?? '') === 'True') ? 'Inactive' : 'Active',
+    //             ];
+    //             continue;
+    //         }
+    //         $masterXml = trim($masterResponse['body'] ?? '');
+    //         if ($masterXml === '') {
+    //             continue;
+    //         }
+    //         /* Parse complete Account XML.*/
+    //         libxml_use_internal_errors(true);
+    //         $account = simplexml_load_string($masterXml);
+    //         if ($account === false) {
+    //             Log::channel('busy')->warning('Failed to parse BUSY Master XML', [
+    //                 'master_code' => $masterCode,
+    //                 'name' => $name,
+    //                 'body' => $masterXml,
+    //                 'errors' => libxml_get_errors(),
+    //             ]);
+    //             libxml_clear_errors();
+    //             continue;
+    //         }
+    //         $address = $account->Address;
+    //         $completeParties[] = [
+    //         /* MASTER1 information*/
+    //             'master_code' => $masterCode,
+    //             'name' => trim((string) ($account->Name ?: $name)),
+    //             'address1' => trim((string) ($address->Address1 ?? '')) ?: null,
+    //             'address2' => trim((string) ($address->Address2 ?? '')) ?: null,
+    //             'telephone' => trim((string) ($address->TelNo ?? '')) ?: null,
+    //             'fax' => trim((string) ($address->Fax ?? '')) ?: null,
+    //             'email' => trim((string) ($address->Email ?? '')) ?: null,
+    //             'mobile' => trim((string) ($address->Mobile ?? '')) ?: null,
+    //             'whatsapp_no' => trim((string) ($address->WhatsAppNo ?? '')) ?: null,
+    //             'contact' => trim((string) ($address->Contact ?? '')) ?: null,
+    //             'it_pan' => trim((string) ($address->ITPAN ?? '')) ?: null,
+    //             'it_ward' => trim((string) ($address->ITWard ?? '')) ?: null,
+    //             'st37' => trim((string) ($address->ST37 ?? '')) ?: null,
+    //             'tin_no' => trim((string) ($address->TINNo ?? '')) ?: null,
+    //             'gst_no' => trim((string) ($address->GSTNo ?? '')) ?: null,
+    //             'country' => trim((string) ($address->CountryName ?? '')) ?: null,
+    //             'state' => trim((string) ($address->StateName ?? '')) ?: null,
+    //             'city' => trim((string) ($address->CityName ?? '')) ?: null,
+    //             'area' => trim((string) ($address->AreaName ?? '')) ?: null,
+    //             'cont_dept_name' => trim((string) ($address->ContDeptName ?? '')) ?: null,
+    //             'transport' => trim((string) ($address->Transport ?? '')) ?: null,
+    //             'station' => trim((string) ($address->Station ?? '')) ?: null,
+    //             'account_no' => trim((string) ($address->AccNo ?? '')) ?: null,
+    //             'tmp_master_code' => trim((string) ($address->TmpMasterCode ?? '')) ?: null,
+    //             'c3' => trim((string) ($address->C3 ?? '')) ?: null,
+    //             'bank_name' => trim((string) ($address->C4 ?? '')) ?: null,
+    //             'ifsc_code' => trim((string) ($address->C5 ?? '')) ?: null,
+    //             'swift_code' => trim((string) ($address->C8 ?? '')) ?: null,
+    //             'parent_group' => trim((string) ($account->ParentGroup ?? '')) ?: null,
+    //             'op_bal' => trim((string) ($account->OPBal ?? '')) ?: null,
+    //             'py_bal' => trim((string) ($account->PYBal ?? '')) ?: null,
+    //             'bill_by_bill_balancing' => trim((string) ($account->BillByBillBalancing ?? '')) ?: null,
+    //             'supplier_type' => trim((string) ($account->SupplierType ?? '')) ?: null,
+    //             'credit_days_sale' => trim((string) ($account->CreditDaysForSale ?? '')) ?: null,
+    //             'credit_days_purchase' => trim((string) ($account->CreditDaysForPurc ?? '')) ?: null,
+    //             'price_level' => trim((string) ($account->PriceLevel ?? '')) ?: null,
+    //             'price_level_purchase' => trim((string) ($account->PriceLevelForPurc ?? '')) ?: null,
+    //             'tax_type' => trim((string) ($account->TaxType ?? '')) ?: null,
+    //             'tmp_code' => trim((string) ($account->tmpCode ?? '')) ?: null,
+    //             'tmp_parent_group_code' => trim((string) ($account->tmpParentGrpCode ?? '')) ?: null,
+    //             'cheque_print_name' => trim((string) ($account->ChequePrintName ?? '')) ?: null,
+    //             'reverse_charge_type' => trim((string) ($account->ReverseChargeType ?? '')) ?: null,
+    //             'input_type' => trim((string) ($account->InputType ?? '')) ?: null,
+    //             'status' => (($attributes['DeactiveMaster'] ?? '') === 'True') ? 'Inactive' : 'Active',
+    //         ];
+    //     }
+    //     Log::channel('busy')->info('Complete BUSY Parties', [
+    //         'count' => count($completeParties),
+    //         'parties' => $completeParties,
+    //     ]);
+    //     /* Only the body is changed to contain the complete party data.*/
+    //     return [
+    //         ...$response,
+    //         'parties' => $completeParties,
+    //     ];
+    // }
 
     public function getTaxes(): array
     {
@@ -339,12 +495,143 @@ class BusyApiService
     /**
      * Fetch BUSY products/items.
      */
-    public function getItems(): array
-    {
-        $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 6 AND PARENTGRP = 401";
-        return $this->executeQuery($query);
+    // public function getItems(): array
+    // {
+    //     $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 6 AND PARENTGRP = 401";
+    //     return $this->executeQuery($query);
+    // }
+public function getItems(): array
+{
+    $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 6 AND PARENTGRP = 401";
+
+    $response = $this->executeQuery($query);
+
+    if (!($response['success'] ?? false)) {
+        return $response;
     }
 
+    $body = trim($response['body'] ?? '');
+
+    if ($body === '') {
+        return [
+            ...$response,
+            'items' => [],
+        ];
+    }
+
+    libxml_use_internal_errors(true);
+    $xml = simplexml_load_string($body);
+
+    if ($xml === false) {
+        Log::channel('busy')->error('Failed to parse BUSY item list', [
+            'body' => $body,
+            'errors' => libxml_get_errors(),
+        ]);
+
+        libxml_clear_errors();
+
+        return [
+            ...$response,
+            'items' => [],
+        ];
+    }
+
+    $xml->registerXPathNamespace('z', '#RowsetSchema');
+    $rows = $xml->xpath('//z:row') ?: [];
+
+    $completeItems = [];
+
+    foreach ($rows as $row) {
+        $attributes = $row->attributes();
+
+        $masterCode = trim((string) ($attributes['Code'] ?? ''));
+        $name = trim((string) ($attributes['Name'] ?? ''));
+
+        if ($masterCode === '' || $name === '') {
+            continue;
+        }
+
+        // Fetch complete item details using BUSY GetMasterXML.
+        $masterResponse = $this->getMaster((int) $masterCode);
+
+        if (!($masterResponse['success'] ?? false)) {
+            Log::channel('busy')->warning('Failed to fetch complete BUSY item', [
+                'master_code' => $masterCode,
+                'name' => $name,
+                'description' => $masterResponse['description'] ?? null,
+            ]);
+
+            // Keep the basic MASTER1 data if complete XML is unavailable.
+            $completeItems[] = [
+                'master_code' => $masterCode,
+                'name' => $name,
+                'alias' => null,
+                'print_name' => null,
+                'parent_group' => null,
+                'unit_name' => null,
+                'mrp' => null,
+                'sale_price' => null,
+                'purchase_price' => null,
+                'price_level' => null,
+                'price_level_purchase' => null,
+                'tax_type' => null,
+                'status' => (($attributes['DeactiveMaster'] ?? '') === 'True')
+                    ? 'Inactive'
+                    : 'Active',
+            ];
+
+            continue;
+        }
+
+        $masterXml = trim($masterResponse['body'] ?? '');
+
+        if ($masterXml === '') {
+            continue;
+        }
+
+        $item = simplexml_load_string($masterXml);
+
+        if ($item === false) {
+            Log::channel('busy')->warning('Failed to parse BUSY Master XML for item', [
+                'master_code' => $masterCode,
+                'name' => $name,
+                'body' => $masterXml,
+                'errors' => libxml_get_errors(),
+            ]);
+
+            libxml_clear_errors();
+            continue;
+        }
+
+        $completeItems[] = [
+            'master_code' => $masterCode,
+            'name' => trim((string) ($item->Name ?? $name)) ?: $name,
+            'alias' => trim((string) ($item->Alias ?? '')) ?: null,
+            'print_name' => trim((string) ($item->PrintName ?? '')) ?: null,
+            'parent_group' => trim((string) ($item->ParentGroup ?? '')) ?: null,
+            'unit_name' => trim((string) ($item->UnitName ?? '')) ?: null,
+            'mrp' => trim((string) ($item->MRP ?? '')) ?: null,
+            'sale_price' => trim((string) ($item->SalePrice ?? '')) ?: null,
+            'purchase_price' => trim((string) ($item->PurchasePrice ?? '')) ?: null,
+            'price_level' => trim((string) ($item->PriceLevel ?? '')) ?: null,
+            'price_level_purchase' => trim((string) ($item->PriceLevelForPurc ?? '')) ?: null,
+            'tax_type' => trim((string) ($item->TaxType ?? '')) ?: null,
+            'status' => (($attributes['DeactiveMaster'] ?? '') === 'True')
+                ? 'Inactive'
+                : 'Active',
+        ];
+    }
+
+    Log::channel('busy')->info('Complete BUSY Items', [
+        'count' => count($completeItems),
+        'items' => $completeItems,
+    ]);
+
+    return [
+        ...$response,
+        'items' => $completeItems,
+    ];
+}
     /**
      * Find BUSY product by name.
      */
