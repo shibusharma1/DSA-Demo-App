@@ -90,7 +90,6 @@ class BusyToDSAParty
                     $response['description'] ?? 'BUSY party fetch failed.'
                 );
             }
-
             /* getCustomers() now returns complete party data.*/
             $parties = $response['parties'] ?? [];
             $result['fetched'] = count($parties);

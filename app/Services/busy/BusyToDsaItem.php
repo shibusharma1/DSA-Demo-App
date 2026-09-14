@@ -16,10 +16,10 @@ class BusyToDsaItem
     public function __construct(
         private BusyApiService $busyApiService
     ) {}
-
     public function fetchProducts(int $company_id): array
     {
         $startedAt = microtime(true);
+
         $result = [
             'success' => false,
             'company_id' => $company_id,
@@ -34,21 +34,31 @@ class BusyToDsaItem
 
         try {
             $response = $this->busyApiService->getItems();
-            Log::info("Message", [$response]);
+
             if (!($response['success'] ?? false)) {
                 throw new \RuntimeException(
-                    $response['description'] ?? 'BUSY product fetch failed.'
+                    $response['description'] ?? 'BUSY item fetch failed.'
                 );
             }
 
-            $items = $this->parseBusyProducts($response['body'] ?? '');
+            // getItems() already returns parsed item data.
+            $items = $response['items'] ?? [];
+
             $result['fetched'] = count($items);
+
             $sync = $this->createOrUpdateDsaProducts($items, $company_id);
+
             $result['inserted'] = $sync['inserted'];
             $result['updated'] = $sync['updated'];
             $result['skipped'] = $sync['skipped'];
-            $result['deactivated'] = $this->deactivateMissingProducts($items, $company_id);
+
+            $result['deactivated'] = $this->deactivateMissingProducts(
+                $items,
+                $company_id
+            );
+
             $result['success'] = true;
+
             Log::channel('busy')->info('Item Pull Completed', [
                 'company_id' => $company_id,
                 'fetched' => $result['fetched'],
@@ -57,66 +67,128 @@ class BusyToDsaItem
                 'skipped' => $result['skipped'],
                 'deactivated' => $result['deactivated'],
             ]);
+
             return $result;
         } catch (Throwable $e) {
+
             $result['error'] = $e->getMessage();
-            Log::channel('busy')->error('BUSY Product Sync Failed', [
+
+            Log::channel('busy')->error('BUSY Item Sync Failed', [
                 'company_id' => $company_id,
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
+
             return $result;
         } finally {
-            $result['duration_ms'] = (int) round((microtime(true) - $startedAt) * 1000);
+
+            $result['duration_ms'] = (int) round(
+                (microtime(true) - $startedAt) * 1000
+            );
         }
     }
 
-    private function parseBusyProducts(string $body): array
-    {
-        $body = trim($body);
-        if ($body === '') {
-            return [];
-        }
-        libxml_use_internal_errors(true);
-        $xml = simplexml_load_string($body);
-        if ($xml === false) {
-            Log::channel('busy')->error('Failed to parse BUSY product XML', [
-                'body' => $body,
-                'errors' => libxml_get_errors(),
-            ]);
-            libxml_clear_errors();
-            return [];
-        }
-        $xml->registerXPathNamespace('z', '#RowsetSchema');
-        $rows = $xml->xpath('//z:row') ?: [];
-        $products = [];
-        foreach ($rows as $row) {
-            $attributes = $row->attributes();
-            $masterCode = trim((string) ($attributes['Code'] ?? ''));
-            $name = trim((string) ($attributes['Name'] ?? ''));
-            $unit = trim((string) ($attributes['CM1'] ?? $attributes['CM2'] ?? ''));
-            $salePrice = $attributes['D2'] ?? 0;
-            $status = ($attributes['DeactiveMaster'] ?? '') === 'True' ? 'Inactive' : 'Active';
-            if ($masterCode === '' || $name === '') {
-                continue;
-            }
+    // public function fetchProducts(int $company_id): array
+    // {
+    //     $startedAt = microtime(true);
+    //     $result = [
+    //         'success' => false,
+    //         'company_id' => $company_id,
+    //         'fetched' => 0,
+    //         'inserted' => 0,
+    //         'updated' => 0,
+    //         'skipped' => 0,
+    //         'deactivated' => 0,
+    //         'duration_ms' => 0,
+    //         'error' => null,
+    //     ];
 
-            $products[] = [
-                'master_code' => $masterCode,
-                'name' => $name,
-                'unit' => $unit !== '' ? $unit : null,
-                'sale_price' => (string) $salePrice,
-                'status' => $status,
-            ];
-        }
+    //     try {
+    //         $response = $this->busyApiService->getItems();
+    //         Log::info("Message Here", [$response]);
+    //         if (!($response['success'] ?? false)) {
+    //             throw new \RuntimeException(
+    //                 $response['description'] ?? 'BUSY product fetch failed.'
+    //             );
+    //         }
+    //         $items = $this->parseBusyProducts($response['body'] ?? '');
+    //         $result['fetched'] = count($items);
+    //         $sync = $this->createOrUpdateDsaProducts($items, $company_id);
+    //         $result['inserted'] = $sync['inserted'];
+    //         $result['updated'] = $sync['updated'];
+    //         $result['skipped'] = $sync['skipped'];
+    //         $result['deactivated'] = $this->deactivateMissingProducts($items, $company_id);
+    //         $result['success'] = true;
+    //         Log::channel('busy')->info('Item Pull Completed', [
+    //             'company_id' => $company_id,
+    //             'fetched' => $result['fetched'],
+    //             'inserted' => $result['inserted'],
+    //             'updated' => $result['updated'],
+    //             'skipped' => $result['skipped'],
+    //             'deactivated' => $result['deactivated'],
+    //         ]);
+    //         return $result;
+    //     } catch (Throwable $e) {
+    //         $result['error'] = $e->getMessage();
+    //         Log::channel('busy')->error('BUSY Product Sync Failed', [
+    //             'company_id' => $company_id,
+    //             'message' => $e->getMessage(),
+    //             'trace' => $e->getTraceAsString(),
+    //         ]);
+    //         return $result;
+    //     } finally {
+    //         $result['duration_ms'] = (int) round((microtime(true) - $startedAt) * 1000);
+    //     }
+    // }
 
-        Log::channel('busy')->info('Parsed BUSY Products', [
-            'count' => count($products),
-            'products' => $products,
-        ]);
+    // private function parseBusyProducts(string $body): array
+    // {
+    //     $body = trim($body);
+    //     if ($body === '') {
+    //         return [];
+    //     }
+    //     libxml_use_internal_errors(true);
+    //     $xml = simplexml_load_string($body);
+    //     if ($xml === false) {
+    //         Log::channel('busy')->error('Failed to parse BUSY product XML', [
+    //             'body' => $body,
+    //             'errors' => libxml_get_errors(),
+    //         ]);
+    //         libxml_clear_errors();
+    //         return [];
+    //     }
+    //     $xml->registerXPathNamespace('z', '#RowsetSchema');
+    //     $rows = $xml->xpath('//z:row') ?: [];
+    //     $products = [];
+    //     foreach ($rows as $row) {
+    //         $attributes = $row->attributes();
+    //         $masterCode = trim((string) ($attributes['Code'] ?? ''));
+    //         $name = trim((string) ($attributes['Name'] ?? ''));
+    //         $unit = trim((string) ($attributes['CM1'] ?? $attributes['CM2'] ?? ''));
+    //         $salePrice = $attributes['D2'] ?? 0;
+    //         $status = ($attributes['DeactiveMaster'] ?? '') === 'True' ? 'Inactive' : 'Active';
+    //         $short_desc = trim((string) ($attributes['address1'] ?? ''));
+    //         if ($masterCode === '' || $name === '') {
+    //             continue;
+    //         }
 
-        return $products;
-    }
+    //         $products[] = [
+    //             'master_code' => $masterCode,
+    //             'name' => $name,
+    //             'unit' => $unit !== '' ? $unit : null,
+    //             'sale_price' => (string) $salePrice,
+    //             'status' => $status,
+    //             'short_desc' => $short_desc,
+    //         ];
+    //     }
+
+    //     Log::channel('busy')->info('Parsed BUSY Products', [
+    //         'count' => count($products),
+    //         'products' => $products,
+    //     ]);
+
+    //     return $products;
+    // }
 
     private function createOrUpdateDsaProducts(array $items, int $company_id): array
     {
@@ -144,8 +216,8 @@ class BusyToDsaItem
                 'unit' => $unitId,
                 'mrp' => $mrp,
                 'details' => null,
-                'short_desc' => null,
-                'status' => 'Active',
+                'short_desc' => $item['short_desc'] ?? null,
+                'status' => $item['status'] ?? 'Active',
                 'updated_at' => now(),
             ];
 
@@ -209,25 +281,70 @@ class BusyToDsaItem
 
     //     return $this->unitCache[$company_id][$key] = (int) $id;
     // }
+    // private function ensureUnitId(string $unitCode, int $company_id): ?int
+    // {
+    //     $unit = $this->normalizeName($unitCode);
+    //     if ($unit === '') {
+    //         return null;
+    //     }
+    //     $key = mb_strtolower($unit);
+    //     if (isset($this->unitCache[$company_id][$key])) {
+    //         return (int) $this->unitCache[$company_id][$key];
+    //     }
+    //     // First check by busyunit_id
+    //     $existing = DB::table($this->unitsTable)
+    //         ->where('company_id', $company_id)
+    //         ->where('busyunit_id', $unit)
+    //         ->first();
+    //     if ($existing) {
+    //         return $this->unitCache[$company_id][$key] = (int) $existing->id;
+    //     }
+    //     // If not found, check by name
+    //     $existing = DB::table($this->unitsTable)
+    //         ->where('company_id', $company_id)
+    //         ->whereRaw('LOWER(name) = ?', [$key])
+    //         ->first();
+
+    //     if ($existing) {
+    //         return $this->unitCache[$company_id][$key] = (int) $existing->id;
+    //     }
+    //     // Create new unit
+    //     $id = DB::table($this->unitsTable)->insertGetId([
+    //         'company_id' => $company_id,
+    //         'name' => 'Unit',
+    //         'symbol' => 'unit',
+    //         // 'busyunit_id' => $unit,
+    //         'status' => 'Active',
+    //         'created_at' => now(),
+    //         'updated_at' => now(),
+    //     ]);
+    //     return $this->unitCache[$company_id][$key] = (int) $id;
+    // }
     private function ensureUnitId(string $unitCode, int $company_id): ?int
     {
         $unit = $this->normalizeName($unitCode);
+
         if ($unit === '') {
             return null;
         }
+
         $key = mb_strtolower($unit);
+
         if (isset($this->unitCache[$company_id][$key])) {
             return (int) $this->unitCache[$company_id][$key];
         }
-        // First check by busyunit_id
+
+        // First check BUSY unit ID
         $existing = DB::table($this->unitsTable)
             ->where('company_id', $company_id)
             ->where('busyunit_id', $unit)
             ->first();
+
         if ($existing) {
             return $this->unitCache[$company_id][$key] = (int) $existing->id;
         }
-        // If not found, check by name
+
+        // Then check unit name
         $existing = DB::table($this->unitsTable)
             ->where('company_id', $company_id)
             ->whereRaw('LOWER(name) = ?', [$key])
@@ -236,18 +353,43 @@ class BusyToDsaItem
         if ($existing) {
             return $this->unitCache[$company_id][$key] = (int) $existing->id;
         }
-        // Create new unit
+
+        // Create unit
         $id = DB::table($this->unitsTable)->insertGetId([
             'company_id' => $company_id,
-            'name' => 'Unit',
-            'symbol' => 'unit',
-            // 'busyunit_id' => $unit,
+            'name' => $unit,
+            'symbol' => $unit,
+            'busyunit_id' => $unit,
             'status' => 'Active',
             'created_at' => now(),
             'updated_at' => now(),
         ]);
+
         return $this->unitCache[$company_id][$key] = (int) $id;
     }
+    // private function deactivateMissingProducts(array $items, int $company_id): int
+    // {
+    //     $busyProductIds = collect($items)
+    //         ->pluck('master_code')
+    //         ->filter()
+    //         ->map(fn($id) => trim((string) $id))
+    //         ->unique()
+    //         ->values()
+    //         ->toArray();
+
+    //     if (empty($busyProductIds)) {
+    //         return 0;
+    //     }
+
+    //     return DB::table($this->productsTable)
+    //         ->where('company_id', $company_id)
+    //         ->whereNotNull('busyproduct_id')
+    //         ->whereNotIn('busyproduct_id', $busyProductIds)
+    //         ->update([
+    //             'status' => 'Inactive',
+    //             'updated_at' => now(),
+    //         ]);
+    // }
     private function deactivateMissingProducts(array $items, int $company_id): int
     {
         $busyProductIds = collect($items)
@@ -283,15 +425,37 @@ class BusyToDsaItem
         if ($value === null) {
             return null;
         }
+
         $value = trim((string) $value);
+
         if ($value === '') {
             return null;
         }
+
         $value = str_replace(',', '', $value);
         $value = preg_replace('/[^0-9.\-]/', '', $value);
+
         if ($value === '' || $value === '-' || $value === '.') {
             return null;
         }
+
         return (float) $value;
     }
+
+    // private function parseNumeric($value): ?float
+    // {
+    //     if ($value === null) {
+    //         return null;
+    //     }
+    //     $value = trim((string) $value);
+    //     if ($value === '') {
+    //         return null;
+    //     }
+    //     $value = str_replace(',', '', $value);
+    //     $value = preg_replace('/[^0-9.\-]/', '', $value);
+    //     if ($value === '' || $value === '-' || $value === '.') {
+    //         return null;
+    //     }
+    //     return (float) $value;
+    // }
 }

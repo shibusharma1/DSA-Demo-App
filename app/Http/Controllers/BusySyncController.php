@@ -18,7 +18,6 @@ class BusySyncController extends Controller
         $validated = $request->validate([
             'company_id' => ['required', 'integer'],
         ]);
-
         try {
             $result = $busyToDSAParty->fetchParties((int) $validated['company_id']);
             return response()->json($result);

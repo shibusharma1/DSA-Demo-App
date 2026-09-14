@@ -23,14 +23,6 @@ Route::prefix('erpnext')->name('erpnext.')->group(function () {
     Route::get('/ping',       [ERPNextOAuthController::class, 'ping'])->name('ping');
 });
 
-
-Route::prefix('erpnext')->name('erpnext.')->group(function () {
-    Route::get('/connect',    [ERPNextOAuthController::class, 'showConnect'])->name('connect');
-    Route::get('/callback',   [ERPNextOAuthController::class, 'callback'])->name('callback');
-    Route::post('/disconnect', [ERPNextOAuthController::class, 'disconnect'])->name('disconnect');
-    Route::get('/ping',       [ERPNextOAuthController::class, 'ping'])->name('ping');
-});
-
 Route::prefix('zoho')->name('zoho.')->group(function () {
     Route::get('/connect',    [ZohoOAuthController::class, 'redirect'])->name('connect');
     Route::get('/callback',   [ZohoOAuthController::class, 'callback'])->name('callback');
@@ -71,13 +63,9 @@ Route::delete('/payment/{payment}', [PaymentController::class, 'destroy'])->name
 
 
 //job url to sync the customer
-
 Route::post('/sync/customers/start', [SyncController::class, 'syncCustomers']);
-
 Route::post('/sync/products/start', [SyncController::class, 'syncProducts']);
-
 Route::post('/sync/payments/start', [SyncController::class, 'syncPayments']);
-
 Route::post('/sync/sales-orders/start', [SyncController::class, 'syncSalesOrders']);
 
 Route::get('/busy/sync/parties', [BusySyncController::class, 'parties']);

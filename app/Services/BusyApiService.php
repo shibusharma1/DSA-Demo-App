@@ -154,10 +154,10 @@ class BusyApiService
      */
     public function getCustomers(): array
     {
-        $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 2 AND PARENTGRP = 116";
-        // $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 6 AND PARENTGRP = 401";
+        // $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 2 AND PARENTGRP = 116";
+        $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 6 AND PARENTGRP = 401";
         $response = $this->executeQuery($query);
-        Log::info("Complete log yaha h",[$response]);
+        Log::info("Complete log yaha h", [$response]);
         if (!($response['success'] ?? false)) {
             return $response;
         }
@@ -250,7 +250,7 @@ class BusyApiService
             }
             $address = $account->Address;
             $completeParties[] = [
-            /* MASTER1 information*/
+                /* MASTER1 information*/
                 'master_code' => $masterCode,
                 'name' => trim((string) ($account->Name ?: $name)),
                 'address1' => trim((string) ($address->Address1 ?? '')) ?: null,
@@ -483,155 +483,153 @@ class BusyApiService
         $query = "SELECT TOP 1 * FROM MASTER1 WHERE MASTERTYPE = 2 AND PARENTGRP = 116 AND NAME = '{$name}'";
         return $this->executeQuery($query);
     }
-    /**
-     * Fetch BUSY item categories.
-     */
+    /**Fetch BUSY item categories. */
     public function getItemCategories(): array
     {
         $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 5 AND PARENTGRP = 0";
         return $this->executeQuery($query);
     }
 
-    /**
-     * Fetch BUSY products/items.
-     */
+    /** Fetch BUSY products/items.*/
     // public function getItems(): array
     // {
     //     $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 6 AND PARENTGRP = 401";
     //     return $this->executeQuery($query);
     // }
-public function getItems(): array
-{
-    $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 6 AND PARENTGRP = 401";
-
-    $response = $this->executeQuery($query);
-
-    if (!($response['success'] ?? false)) {
-        return $response;
-    }
-
-    $body = trim($response['body'] ?? '');
-
-    if ($body === '') {
-        return [
-            ...$response,
-            'items' => [],
-        ];
-    }
-
-    libxml_use_internal_errors(true);
-    $xml = simplexml_load_string($body);
-
-    if ($xml === false) {
-        Log::channel('busy')->error('Failed to parse BUSY item list', [
-            'body' => $body,
-            'errors' => libxml_get_errors(),
-        ]);
-
-        libxml_clear_errors();
-
-        return [
-            ...$response,
-            'items' => [],
-        ];
-    }
-
-    $xml->registerXPathNamespace('z', '#RowsetSchema');
-    $rows = $xml->xpath('//z:row') ?: [];
-
-    $completeItems = [];
-
-    foreach ($rows as $row) {
-        $attributes = $row->attributes();
-
-        $masterCode = trim((string) ($attributes['Code'] ?? ''));
-        $name = trim((string) ($attributes['Name'] ?? ''));
-
-        if ($masterCode === '' || $name === '') {
-            continue;
+    public function getItems(): array
+    {
+        $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 6 AND PARENTGRP = 401";
+        $response = $this->executeQuery($query);
+        if (!($response['success'] ?? false)) {
+            return $response;
         }
-
-        // Fetch complete item details using BUSY GetMasterXML.
-        $masterResponse = $this->getMaster((int) $masterCode);
-
-        if (!($masterResponse['success'] ?? false)) {
-            Log::channel('busy')->warning('Failed to fetch complete BUSY item', [
-                'master_code' => $masterCode,
-                'name' => $name,
-                'description' => $masterResponse['description'] ?? null,
-            ]);
-
-            // Keep the basic MASTER1 data if complete XML is unavailable.
-            $completeItems[] = [
-                'master_code' => $masterCode,
-                'name' => $name,
-                'alias' => null,
-                'print_name' => null,
-                'parent_group' => null,
-                'unit_name' => null,
-                'mrp' => null,
-                'sale_price' => null,
-                'purchase_price' => null,
-                'price_level' => null,
-                'price_level_purchase' => null,
-                'tax_type' => null,
-                'status' => (($attributes['DeactiveMaster'] ?? '') === 'True')
-                    ? 'Inactive'
-                    : 'Active',
+        $body = trim($response['body'] ?? '');
+        Log::info("complete item body", [$body]);
+        if ($body === '') {
+            return [
+                ...$response,
+                'items' => [],
             ];
-
-            continue;
         }
 
-        $masterXml = trim($masterResponse['body'] ?? '');
+        libxml_use_internal_errors(true);
+        $xml = simplexml_load_string($body);
 
-        if ($masterXml === '') {
-            continue;
-        }
-
-        $item = simplexml_load_string($masterXml);
-
-        if ($item === false) {
-            Log::channel('busy')->warning('Failed to parse BUSY Master XML for item', [
-                'master_code' => $masterCode,
-                'name' => $name,
-                'body' => $masterXml,
+        if ($xml === false) {
+            Log::channel('busy')->error('Failed to parse BUSY item list', [
+                'body' => $body,
                 'errors' => libxml_get_errors(),
             ]);
 
             libxml_clear_errors();
-            continue;
+
+            return [
+                ...$response,
+                'items' => [],
+            ];
         }
 
-        $completeItems[] = [
-            'master_code' => $masterCode,
-            'name' => trim((string) ($item->Name ?? $name)) ?: $name,
-            'alias' => trim((string) ($item->Alias ?? '')) ?: null,
-            'print_name' => trim((string) ($item->PrintName ?? '')) ?: null,
-            'parent_group' => trim((string) ($item->ParentGroup ?? '')) ?: null,
-            'unit_name' => trim((string) ($item->UnitName ?? '')) ?: null,
-            'mrp' => trim((string) ($item->MRP ?? '')) ?: null,
-            'sale_price' => trim((string) ($item->SalePrice ?? '')) ?: null,
-            'purchase_price' => trim((string) ($item->PurchasePrice ?? '')) ?: null,
-            'price_level' => trim((string) ($item->PriceLevel ?? '')) ?: null,
-            'price_level_purchase' => trim((string) ($item->PriceLevelForPurc ?? '')) ?: null,
-            'tax_type' => trim((string) ($item->TaxType ?? '')) ?: null,
-            'status' => (($attributes['DeactiveMaster'] ?? '') === 'True')
-                ? 'Inactive'
-                : 'Active',
+        $xml->registerXPathNamespace('z', '#RowsetSchema');
+        $rows = $xml->xpath('//z:row') ?: [];
+
+        $completeItems = [];
+
+        foreach ($rows as $row) {
+            $attributes = $row->attributes();
+
+            $masterCode = trim((string) ($attributes['Code'] ?? ''));
+            $name = trim((string) ($attributes['Name'] ?? ''));
+
+            if ($masterCode === '' || $name === '') {
+                continue;
+            }
+
+            // Fetch complete item details using BUSY GetMasterXML.
+            $masterResponse = $this->getMaster((int) $masterCode);
+            Log::info("Completed master record", [$masterResponse]);
+
+            if (!($masterResponse['success'] ?? false)) {
+                Log::channel('busy')->warning('Failed to fetch complete BUSY item', [
+                    'master_code' => $masterCode,
+                    'name' => $name,
+                    'description' => $masterResponse['description'] ?? null,
+                ]);
+
+                // Keep the basic MASTER1 data if complete XML is unavailable.
+                $completeItems[] = [
+                    'master_code' => $masterCode,
+                    'name' => $name,
+                    'alias' => null,
+                    'print_name' => null,
+                    'parent_group' => null,
+                    'unit_name' => null,
+                    'mrp' => null,
+                    'sale_price' => null,
+                    'purchase_price' => null,
+                    'price_level' => null,
+                    'price_level_purchase' => null,
+                    'tax_type' => null,
+                    'status' => (($attributes['DeactiveMaster'] ?? '') === 'True') ? 'Inactive' : 'Active',
+                    'short_desc' => null,
+                ];
+                continue;
+            }
+
+            $masterXml = trim($masterResponse['body'] ?? '');
+
+            if ($masterXml === '') {
+                continue;
+            }
+
+            $item = simplexml_load_string($masterXml);
+
+            if ($item === false) {
+                Log::channel('busy')->warning('Failed to parse BUSY Master XML for item', [
+                    'master_code' => $masterCode,
+                    'name' => $name,
+                    'body' => $masterXml,
+                    'errors' => libxml_get_errors(),
+                ]);
+
+                libxml_clear_errors();
+                continue;
+            }
+
+            Log::info("This is the item 1 2 3", [$item]);
+
+            $completeItems[] = [
+                'master_code' => $masterCode,
+                'name' => trim((string) ($item->Name ?? $name)) ?: $name,
+                'alias' => trim((string) ($item->Alias ?? '')) ?: null,
+                'print_name' => trim((string) ($item->PrintName ?? '')) ?: null,
+                'parent_group' => trim((string) ($item->ParentGroup ?? '')) ?: null,
+                'unit_name' => trim((string) ($item->UnitName ?? '')) ?: null,
+                'mrp' => trim((string) ($item->MRP ?? '')) ?: null,
+                'sale_price' => trim((string) ($item->SalePrice ?? '')) ?: null,
+                'purchase_price' => trim((string) ($item->PurchasePrice ?? '')) ?: null,
+                'price_level' => trim((string) ($item->PriceLevel ?? '')) ?: null,
+                'price_level_purchase' => trim((string) ($item->PriceLevelForPurc ?? '')) ?: null,
+                'tax_type' => trim((string) ($item->TaxType ?? '')) ?: null,
+                'status' => (($attributes['DeactiveMaster'] ?? '') === 'True') ? 'Inactive' : 'Active',
+                'short_desc' => implode(' ', array_filter([
+                    trim((string) ($item->Address->Address1 ?? '')),
+                    trim((string) ($item->Address->Address2 ?? '')),
+                    trim((string) ($item->Address->Address3 ?? '')),
+                    trim((string) ($item->Address->Address4 ?? '')),
+                ])) ?: null,
+            ];
+        }
+
+        Log::channel('busy')->info('Complete BUSY Items', [
+            'count' => count($completeItems),
+            'items' => $completeItems,
+        ]);
+
+        return [
+            ...$response,
+            'items' => $completeItems,
         ];
     }
-
-    Log::channel('busy')->info('Complete BUSY Items', [
-        'count' => count($completeItems),
-        'items' => $completeItems,
-    ]);
-
-    return [
-        ...$response,
-        'items' => $completeItems,
-    ];
-}
     /**
      * Find BUSY product by name.
      */
