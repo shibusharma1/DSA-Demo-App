@@ -11,7 +11,7 @@ class BusyToDsaItem
 {
     private string $productsTable = 'products';
     private string $unitsTable = 'unit_types';
-    private string $categoriesTable = 'categories';
+    private string $categoriesTable = 'item_categories';
     private array $categoryCache = [];
     private array $unitCache = [];
 
