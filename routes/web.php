@@ -70,6 +70,7 @@ Route::post('/sync/sales-orders/start', [SyncController::class, 'syncSalesOrders
 
 Route::get('/busy/sync/parties', [BusySyncController::class, 'parties']);
 Route::get('/busy/sync/products', [BusySyncController::class, 'products']);
+Route::get('/busy/sync/collections', [BusySyncController::class, 'collections']);
 Route::get('/busy/sync/units', [BusySyncController::class, 'units']);
 Route::get('/busy/sync/taxes', [BusySyncController::class, 'taxes']);
 Route::get('/busy/sync/item-categories',[BusySyncController::class, 'itemCategories']);

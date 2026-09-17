@@ -12,7 +12,7 @@ use Throwable;
 
 class BusyToDSAParty
 {
-    private string $partiesTable = 'clients';
+    private string $partiesTable = 'parties_busy';
 
     public function __construct(
         private BusyApiService $busyApiService
@@ -241,12 +241,12 @@ class BusyToDSAParty
                 $skipped++;
                 continue;
             }
-            $countryId = (!empty($party['country'])) ? CountryResolver::resolveId($party['country']) : null;
+            // $countryId = (!empty($party['country'])) ? CountryResolver::resolveId($party['country']) : null;
 
-            if ($countryId) {
-                $country_info = Country::find($countryId);
-                $phone_code = $country_info->phonecode ?? ''; // Or whatever field you need
-            }
+            // if ($countryId) {
+            //     $country_info = Country::find($countryId);
+            //     $phone_code = $country_info->phonecode ?? ''; // Or whatever field you need
+            // }
             $data = [
                 'company_name' => $name,
                 'name' => !empty($party['contact']) ? trim((string) $party['contact']) : null,
@@ -257,7 +257,8 @@ class BusyToDSAParty
                 'address_1' => $party['address1'] ?? null,
                 'address_2' => $party['address2'] ?? null,
                 // 'country' => $party['country'] ?? null,
-                'country' => $countryId ?? null,
+                // 'country' => $countryId ?? null,
+                'country' => 10,
                 'phonecode' => $phone_code ?? '',
                 'pan' => !empty($party['it_pan']) ? trim((string) $party['it_pan']) : null,
                 // 'gst_no' => !empty($party['gst_no']) ? trim((string) $party['gst_no']) : null,

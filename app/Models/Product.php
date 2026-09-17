@@ -3,27 +3,42 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Product extends Model
 {
-    use SoftDeletes;
+    protected $table = 'products';
 
     protected $fillable = [
         'company_id',
+        'busyproduct_id',
         'product_name',
         'product_code',
+        'category_id',
+        'brand',
+        'unit',
         'mrp',
-        'd_price',
-        'r_price',
-        'unit_name',
-        'inventory_available_quantity',
+        'details',
+        'short_desc',
         'status',
-        // 'zbproduct_id',
-        'zoho_id',
-        'erpnext_id',
-        'tally_id',
-        'busy_id',
-        'sap_id'
     ];
+
+    protected $casts = [
+        'mrp' => 'decimal:4',
+    ];
+
+    public function category(): BelongsTo
+    {
+        return $this->belongsTo(ItemCategory::class, 'category_id');
+    }
+
+    public function unitType(): BelongsTo
+    {
+        return $this->belongsTo(UnitType::class, 'unit');
+    }
+
+    public function company(): BelongsTo
+    {
+        return $this->belongsTo(Company::class);
+    }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\busy\BusyToDsaCollections;
 use App\Services\busy\BusyToDSAParty;
 use App\Services\busy\BusyToDsaItem;
 use App\Services\busy\BusyToDsaItemCategories;
@@ -36,6 +37,22 @@ class BusySyncController extends Controller
 
         try {
             $result = $BusyToDsaItem->fetchProducts((int) $validated['company_id']);
+            return response()->json($result);
+        } catch (Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
+    public function collections(Request $request, BusyToDsaCollections $BusyToDsaCollections): JsonResponse
+    {
+        $validated = $request->validate([
+            'company_id' => ['required', 'integer'],
+        ]);
+
+        try {
+            $result = $BusyToDsaCollections->fetchCollections((int) $validated['company_id']);
             return response()->json($result);
         } catch (Throwable $e) {
             return response()->json([
