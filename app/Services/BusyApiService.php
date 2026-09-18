@@ -521,4 +521,124 @@ class BusyApiService
         }
         return str_contains($result['body'] ?? '', '<NAME>') || str_contains($result['body'] ?? '', $name);
     }
+
+    /**
+     * Fetch current customer-wise outstanding amount from BUSY.
+     *
+     * Customers are identified from MASTER1:
+     * MASTERTYPE = 2
+     * PARENTGRP = 116 (Sundry Debtors)
+     *
+     * The result is grouped by MasterCode1 and returned as:
+     * [
+     *     [
+     *         'master_code' => '123',
+     *         'name' => 'ABC Customer',
+     *         'outstanding_amount' => 25000.00,
+     *     ],
+     * ]
+     */
+    public function getCustomerOutstanding(): array
+    {
+        $query = "
+        SELECT
+            M.Code AS MasterCode,
+            M.Name AS Name,
+            COALESCE(SUM(T.Value1), 0) AS OutstandingAmount
+        FROM MASTER1 M
+        LEFT JOIN TRAN2 T
+            ON T.MasterCode1 = M.Code
+        WHERE
+            M.MASTERTYPE = 2
+            AND M.PARENTGRP = 116
+        GROUP BY
+            M.Code,
+            M.Name
+        ORDER BY
+            M.Name
+    ";
+
+        Log::channel('busy')->info('BUSY Customer Outstanding Query', [
+            'query' => $query,
+        ]);
+
+        $response = $this->executeQuery($query);
+
+        if (!($response['success'] ?? false)) {
+            return $response;
+        }
+
+        $body = trim((string) ($response['body'] ?? ''));
+
+        if ($body === '') {
+            return [
+                ...$response,
+                'outstandings' => [],
+            ];
+        }
+
+        libxml_use_internal_errors(true);
+
+        $xml = simplexml_load_string($body);
+
+        if ($xml === false) {
+            Log::channel('busy')->error(
+                'Failed to parse BUSY customer outstanding XML',
+                [
+                    'body' => $body,
+                    'errors' => libxml_get_errors(),
+                ]
+            );
+
+            libxml_clear_errors();
+
+            return [
+                ...$response,
+                'success' => false,
+                'description' => 'Unable to parse BUSY customer outstanding XML.',
+                'outstandings' => [],
+            ];
+        }
+
+        $xml->registerXPathNamespace('z', '#RowsetSchema');
+
+        $rows = $xml->xpath('//z:row') ?: [];
+
+        $outstandings = [];
+
+        foreach ($rows as $row) {
+            $attributes = $row->attributes();
+
+            $masterCode = trim((string) ($attributes['MasterCode'] ?? ''));
+            $name = trim((string) ($attributes['Name'] ?? ''));
+
+            if ($masterCode === '') {
+                continue;
+            }
+
+            $amount = (float) (
+                $attributes['OutstandingAmount']
+                ?? 0
+            );
+
+            $outstandings[] = [
+                'master_code' => $masterCode,
+                'name' => $name,
+                'outstanding_amount' => round($amount, 2),
+            ];
+        }
+
+        Log::channel('busy')->info(
+            'BUSY Customer Outstanding Fetched',
+            [
+                'count' => count($outstandings),
+                'outstandings' => $outstandings,
+            ]
+        );
+
+        return [
+            ...$response,
+            'outstandings' => $outstandings,
+        ];
+    }
 }
