@@ -27,34 +27,26 @@ class BusyToDsaPartyOutstanding
 
         try {
             $response = $this->busyApiService->getCustomerOutstanding();
-
             if (!($response['success'] ?? false)) {
                 throw new \RuntimeException(
                     $response['description']
                         ?? 'BUSY customer outstanding fetch failed.'
                 );
             }
-
             $outstandings = $response['outstandings'] ?? [];
-
             $result['fetched'] = count($outstandings);
-
             foreach ($outstandings as $outstanding) {
                 $masterCode = trim(
                     (string) ($outstanding['master_code'] ?? '')
                 );
-
                 $name = trim(
                     (string) ($outstanding['name'] ?? '')
                 );
-
                 $amount = (float) (
                     $outstanding['outstanding_amount'] ?? 0
                 );
-
                 if ($masterCode === '') {
                     $result['skipped']++;
-
                     Log::channel('busy')->warning(
                         'BUSY outstanding skipped: master code missing',
                         [
@@ -63,10 +55,8 @@ class BusyToDsaPartyOutstanding
                             'outstanding_amount' => $amount,
                         ]
                     );
-
                     continue;
                 }
-
                 /*
                  * Match BUSY customer with DSA party.
                  *
@@ -77,10 +67,8 @@ class BusyToDsaPartyOutstanding
                     ->where('company_id', $companyId)
                     ->where('busyparty_id', $masterCode)
                     ->first();
-
                 if (!$party) {
                     $result['skipped']++;
-
                     Log::channel('busy')->warning(
                         'BUSY outstanding skipped: party not mapped',
                         [
@@ -90,21 +78,16 @@ class BusyToDsaPartyOutstanding
                             'outstanding_amount' => $amount,
                         ]
                     );
-
                     continue;
                 }
-
                 $result['matched']++;
-
                 DB::table('parties_busy')
                     ->where('id', $party->id)
                     ->update([
                         'outstanding_amount' => round($amount, 2),
                         'updated_at' => now(),
                     ]);
-
                 $result['updated']++;
-
                 Log::channel('busy')->info(
                     'BUSY customer outstanding updated',
                     [
@@ -116,18 +99,14 @@ class BusyToDsaPartyOutstanding
                     ]
                 );
             }
-
             $result['success'] = true;
-
             Log::channel('busy')->info(
                 'BUSY customer outstanding sync completed',
                 $result
             );
-
             return $result;
         } catch (Throwable $e) {
             $result['error'] = $e->getMessage();
-
             Log::channel('busy')->error(
                 'BUSY customer outstanding sync failed',
                 [
@@ -136,7 +115,6 @@ class BusyToDsaPartyOutstanding
                     'trace' => $e->getTraceAsString(),
                 ]
             );
-
             return $result;
         }
     }
