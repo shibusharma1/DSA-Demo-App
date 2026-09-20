@@ -49,7 +49,7 @@ class Order extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(
-            Client::class,
+            PartyBusy::class,
             'client_id'
         );
     }
@@ -67,4 +67,11 @@ class Order extends Model
             'order_id'
         )->orderBy('sort_order');
     }
+    public function items(): HasMany
+{
+    return $this->hasMany(
+        OrderDetail::class,
+        'order_id'
+    )->orderBy('sort_order');
+}
 }

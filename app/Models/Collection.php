@@ -75,7 +75,7 @@ class Collection extends Model
     public function client(): BelongsTo
     {
         return $this->belongsTo(
-            Client::class,
+            PartyBusy::class,
             'client_id'
         );
     }

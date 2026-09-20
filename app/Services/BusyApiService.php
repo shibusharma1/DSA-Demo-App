@@ -613,6 +613,45 @@ class BusyApiService
      * SC = 2
      * VchType = 9 => Sale Voucher
      */
+    // public function createSaleVoucher(string $voucherXml): array
+    // {
+    //     $response = Http::timeout(60)
+    //         ->withHeaders([
+    //             'SC' => 2,
+    //             'VchType' => 9,
+    //             'VchXml' => $voucherXml,
+    //             'UserName' => 's',
+    //             'Pwd' => 's',
+    //         ])
+    //         ->get('http://127.0.0.1:981');
+
+    //     Log::channel('busy')->info('BUSY Sale Voucher Request', [
+    //         'url' => 'http://127.0.0.1:981',
+    //         'vch_type' => 9,
+    //         'xml' => $voucherXml,
+    //     ]);
+
+    //     Log::channel('busy')->info('BUSY Sale Voucher Response', [
+    //         'status' => $response->status(),
+    //         'body' => $response->body(),
+    //     ]);
+
+    //     if (!$response->successful()) {
+    //         return [
+    //             'success' => false,
+    //             'status' => $response->status(),
+    //             'description' => 'BUSY API request failed.',
+    //             'body' => $response->body(),
+    //         ];
+    //     }
+
+    //     return [
+    //         'success' => true,
+    //         'status' => $response->status(),
+    //         'body' => $response->body(),
+    //         'description' => '',
+    //     ];
+    // }
     public function createSaleVoucher(string $voucherXml): array
     {
         $response = Http::timeout(60)
@@ -620,13 +659,13 @@ class BusyApiService
                 'SC' => 2,
                 'VchType' => 9,
                 'VchXml' => $voucherXml,
-                'UserName' => config('services.busy.username'),
-                'Pwd' => config('services.busy.password'),
+                'UserName' => 's',
+                'Pwd' => 's',
             ])
-            ->get($this->baseUrl);
+            ->get('http://127.0.0.1:981');
 
         Log::channel('busy')->info('BUSY Sale Voucher Request', [
-            'url' => $this->baseUrl,
+            'url' => 'http://127.0.0.1:981',
             'vch_type' => 9,
             'xml' => $voucherXml,
         ]);
@@ -634,6 +673,7 @@ class BusyApiService
         Log::channel('busy')->info('BUSY Sale Voucher Response', [
             'status' => $response->status(),
             'body' => $response->body(),
+            'headers' => $response->headers(),
         ]);
 
         if (!$response->successful()) {

@@ -156,7 +156,11 @@ class BusyToDsaOrder
             $busyOrderId = $this->extractBusyVoucherId(
                 $response['body'] ?? ''
             );
-
+            if (!$busyOrderId) {
+                throw new \RuntimeException(
+                    'BUSY returned HTTP 200 but did not return a voucher ID or confirmation. busy ID not received'
+                );
+            }
             /*
             |--------------------------------------------------------------------------
             | Update DSA Order
@@ -186,7 +190,6 @@ class BusyToDsaOrder
             );
 
             return $result;
-
         } catch (Throwable $e) {
 
             /*
@@ -305,6 +308,20 @@ class BusyToDsaOrder
             'VchNo',
             $order->order_no
         );
+
+        /*
+|--------------------------------------------------------------------------
+| Sales Type
+|--------------------------------------------------------------------------
+*/
+
+        $this->appendText(
+            $xml,
+            $sale,
+            'STPTName',
+            'Local-ItemWise'
+        );
+
 
         /*
         |--------------------------------------------------------------------------
@@ -862,6 +879,8 @@ class BusyToDsaOrder
             $order->order_no
         );
 
+
+
         $this->appendText(
             $xml,
             $detail,
@@ -1115,7 +1134,11 @@ class BusyToDsaOrder
         if ($body === '') {
             return null;
         }
-
+        Log::info("Data or body received form the busy", [$body]);
+        // BUSY may return the voucher ID as plain text
+        if (ctype_digit($body)) {
+            return $body;
+        }
         /*
         |--------------------------------------------------------------------------
         | XML response
@@ -1166,13 +1189,15 @@ class BusyToDsaOrder
 
         if (is_array($json)) {
 
-            foreach ([
-                'VchCode',
-                'VoucherCode',
-                'VchId',
-                'VoucherId',
-                'id',
-            ] as $key) {
+            foreach (
+                [
+                    'VchCode',
+                    'VoucherCode',
+                    'VchId',
+                    'VoucherId',
+                    'id',
+                ] as $key
+            ) {
 
                 if (
                     isset($json[$key]) &&

@@ -16,118 +16,118 @@ use Throwable;
 class OrderController extends Controller
 {
 
-public function index(Request $request)
-{
-    
-    $companyId = 1;
-    $query = Order::query()
-        ->where('company_id', $companyId)
-        ->with('client')
-        ->withCount('details');
+    public function index(Request $request)
+    {
 
-    /*
+        $companyId = 1;
+        $query = Order::query()
+            ->where('company_id', $companyId)
+            ->with('client')
+            ->withCount('details');
+
+        /*
     |--------------------------------------------------------------------------
     | Search
     |--------------------------------------------------------------------------
     */
-    if ($request->filled('search')) {
-        $search = trim($request->search);
+        if ($request->filled('search')) {
+            $search = trim($request->search);
 
-        $query->where(function ($q) use ($search) {
-            $q->where('order_no', 'like', "%{$search}%")
-                ->orWhere('busyorder_id', 'like', "%{$search}%")
-                ->orWhereHas('client', function ($clientQuery) use ($search) {
-                    $clientQuery->where('name', 'like', "%{$search}%")
-                        ->orWhere('company_name', 'like', "%{$search}%");
-                });
-        });
-    }
+            $query->where(function ($q) use ($search) {
+                $q->where('order_no', 'like', "%{$search}%")
+                    ->orWhere('busyorder_id', 'like', "%{$search}%")
+                    ->orWhereHas('client', function ($clientQuery) use ($search) {
+                        $clientQuery->where('name', 'like', "%{$search}%")
+                            ->orWhere('company_name', 'like', "%{$search}%");
+                    });
+            });
+        }
 
-    /*
+        /*
     |--------------------------------------------------------------------------
     | Order Status
     |--------------------------------------------------------------------------
     */
-    if ($request->filled('status')) {
-        $query->where('status', $request->status);
-    }
+        if ($request->filled('status')) {
+            $query->where('status', $request->status);
+        }
 
-    /*
+        /*
     |--------------------------------------------------------------------------
     | BUSY Sync Status
     |--------------------------------------------------------------------------
     */
-    if ($request->filled('busy_sync_status')) {
-        $query->where(
-            'busy_sync_status',
-            $request->busy_sync_status
-        );
-    }
+        if ($request->filled('busy_sync_status')) {
+            $query->where(
+                'busy_sync_status',
+                $request->busy_sync_status
+            );
+        }
 
-    /*
+        /*
     |--------------------------------------------------------------------------
     | Date Filter
     |--------------------------------------------------------------------------
     */
-    if ($request->filled('from_date')) {
-        $query->whereDate(
-            'order_date',
-            '>=',
-            $request->from_date
-        );
-    }
+        if ($request->filled('from_date')) {
+            $query->whereDate(
+                'order_date',
+                '>=',
+                $request->from_date
+            );
+        }
 
-    if ($request->filled('to_date')) {
-        $query->whereDate(
-            'order_date',
-            '<=',
-            $request->to_date
-        );
-    }
+        if ($request->filled('to_date')) {
+            $query->whereDate(
+                'order_date',
+                '<=',
+                $request->to_date
+            );
+        }
 
-    /*
+        /*
     |--------------------------------------------------------------------------
     | Pagination
     |--------------------------------------------------------------------------
     */
-    $orders = $query
-        ->latest('id')
-        ->paginate(20)
-        ->withQueryString();
+        $orders = $query
+            ->latest('id')
+            ->paginate(20)
+            ->withQueryString();
 
-    /*
+        /*
     |--------------------------------------------------------------------------
     | Summary
     |--------------------------------------------------------------------------
     */
-    $summaryQuery = Order::query()
-        ->where('company_id', $companyId);
+        $summaryQuery = Order::query()
+            ->where('company_id', $companyId);
 
-    $totalOrders = (clone $summaryQuery)->count();
+        $totalOrders = (clone $summaryQuery)->count();
 
-    $syncedOrders = (clone $summaryQuery)
-        ->where('busy_sync_status', 'synced')
-        ->count();
+        $syncedOrders = (clone $summaryQuery)
+            ->where('busy_sync_status', 'synced')
+            ->count();
 
-    $pendingOrders = (clone $summaryQuery)
-        ->where(function ($q) {
-            $q->whereNull('busy_sync_status')
-                ->orWhere('busy_sync_status', 'pending');
-        })
-        ->count();
+        $pendingOrders = (clone $summaryQuery)
+            ->where(function ($q) {
+                $q->whereNull('busy_sync_status')
+                    ->orWhere('busy_sync_status', 'pending');
+            })
+            ->count();
 
-    $failedOrders = (clone $summaryQuery)
-        ->where('busy_sync_status', 'failed')
-        ->count();
+        $failedOrders = (clone $summaryQuery)
+            ->where('busy_sync_status', 'failed')
+            ->count();
 
-    return view('orders.index', compact(
-        'orders',
-        'totalOrders',
-        'syncedOrders',
-        'pendingOrders',
-        'failedOrders'
-    ));
-}
+        return view('orders.index', compact(
+            'orders',
+            'totalOrders',
+            'syncedOrders',
+            'pendingOrders',
+            'failedOrders'
+        ));
+    }
     /**
      * Display the create order page.
      */
@@ -140,7 +140,7 @@ public function index(Request $request)
         | Clients
         |--------------------------------------------------------------------------
         */
-        $clients = DB::table('clients')
+        $clients = DB::table('parties_busy')
             ->where('company_id', $companyId)
             ->where(function ($query) {
                 $query->whereNull('status')
@@ -235,12 +235,13 @@ public function index(Request $request)
     public function store(Request $request): RedirectResponse
     {
         $companyId = (int) ($request->user()?->company_id ?? 1);
+        $companyId = 1;
 
         $validated = $request->validate([
             'client_id' => [
                 'required',
                 'integer',
-                'exists:clients,id',
+                'exists:parties_busy,id',
             ],
 
             'order_date' => [
@@ -319,7 +320,7 @@ public function index(Request $request)
         |--------------------------------------------------------------------------
         */
 
-        $client = DB::table('clients')
+        $client = DB::table('parties_busy')
             ->where('id', $validated['client_id'])
             ->where('company_id', $companyId)
             ->first();
