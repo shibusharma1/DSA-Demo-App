@@ -73,4 +73,17 @@ Route::get('/busy/sync/products', [BusySyncController::class, 'products']);
 Route::get('/busy/sync/collections', [BusySyncController::class, 'collections']);
 Route::get('/busy/sync/units', [BusySyncController::class, 'units']);
 Route::get('/busy/sync/taxes', [BusySyncController::class, 'taxes']);
-Route::get('/busy/sync/item-categories',[BusySyncController::class, 'itemCategories']);
+Route::get('/busy/sync/item-categories', [BusySyncController::class, 'itemCategories']);
+Route::get('/busy/sync/outstandings', [BusySyncController::class, 'outstandings']);
+Route::post('/orders/{order}/sync-busy', [OrderController::class, 'syncToBusy'])->name('orders.sync-busy');
+
+
+
+
+
+/* Orders */
+Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
+Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');
+Route::post('/orders', [OrderController::class, 'store'])->name('orders.store');
+Route::get('/orders/{order}', [OrderController::class, 'show'])->name('orders.show');
+Route::get('/orders/product/{product}', [OrderController::class, 'product'])->name('orders.product');

@@ -605,4 +605,51 @@ class BusyApiService
             'outstandings' => $outstandings,
         ];
     }
+
+    /**
+     * Create a BUSY voucher using XML.
+     *
+     * BUSY:
+     * SC = 2
+     * VchType = 9 => Sale Voucher
+     */
+    public function createSaleVoucher(string $voucherXml): array
+    {
+        $response = Http::timeout(60)
+            ->withHeaders([
+                'SC' => 2,
+                'VchType' => 9,
+                'VchXml' => $voucherXml,
+                'UserName' => config('services.busy.username'),
+                'Pwd' => config('services.busy.password'),
+            ])
+            ->get($this->baseUrl);
+
+        Log::channel('busy')->info('BUSY Sale Voucher Request', [
+            'url' => $this->baseUrl,
+            'vch_type' => 9,
+            'xml' => $voucherXml,
+        ]);
+
+        Log::channel('busy')->info('BUSY Sale Voucher Response', [
+            'status' => $response->status(),
+            'body' => $response->body(),
+        ]);
+
+        if (!$response->successful()) {
+            return [
+                'success' => false,
+                'status' => $response->status(),
+                'description' => 'BUSY API request failed.',
+                'body' => $response->body(),
+            ];
+        }
+
+        return [
+            'success' => true,
+            'status' => $response->status(),
+            'body' => $response->body(),
+            'description' => '',
+        ];
+    }
 }

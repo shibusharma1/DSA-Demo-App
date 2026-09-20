@@ -6,6 +6,7 @@ use App\Services\busy\BusyToDsaCollections;
 use App\Services\busy\BusyToDSAParty;
 use App\Services\busy\BusyToDsaItem;
 use App\Services\busy\BusyToDsaItemCategories;
+use App\Services\busy\BusyToDsaPartyOutstanding;
 use App\Services\busy\BusyToDsaTaxes;
 use App\Services\busy\BusyToDsaUnit;
 use Illuminate\Http\JsonResponse;
@@ -61,6 +62,22 @@ class BusySyncController extends Controller
             ], 500);
         }
     }
+    public function outstandings(Request $request, BusyToDsaPartyOutstanding $BusyToDsaPartyOustanding): JsonResponse
+    {
+        $validated = $request->validate([
+            'company_id' => ['required', 'integer'],
+        ]);
+
+        try {
+            $result = $BusyToDsaPartyOustanding->fetchPartyOutstanding((int) $validated['company_id']);
+            return response()->json($result);
+        } catch (Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'error' => $e->getMessage(),
+            ], 500);
+        }
+    }
     public function units(Request $request, BusyToDsaUnit $busyToDsaUnits): JsonResponse
     {
         $validated = $request->validate([
@@ -92,7 +109,8 @@ class BusySyncController extends Controller
             ], 500);
         }
     }
-    public function itemCategories(Request $request, BusyToDsaItemCategories $busyToDsaItemCategories): JsonResponse {
+    public function itemCategories(Request $request, BusyToDsaItemCategories $busyToDsaItemCategories): JsonResponse
+    {
         $validated = $request->validate([
             'company_id' => ['required', 'integer'],
         ]);

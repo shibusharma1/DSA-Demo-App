@@ -3,43 +3,68 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use App\Models\OrderItem;
-use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Order extends Model
 {
-    use SoftDeletes;
+    protected $table = 'orders';
 
     protected $fillable = [
         'company_id',
-        'customer_id',
+        'client_id',
+        'busyorder_id',
         'order_no',
-        'tot_amount',
-        'grand_total',
-        'due_amount',
-        'order_note',
         'order_date',
-        'due_date',
-        'delivery_status',
-        'zoho_id',
-        'erpnext_id',
-        'tally_id',
-        'busy_id',
-        'sap_id'
+        'order_to_id',
+        'order_notes',
+        'sub_total',
+        'discount',
+        'total_tax',
+        'delivery_charge',
+        'grand_total',
+        'status',
+        'busy_sync_status',
+        'busy_sync_message',
+        'busy_synced_at',
     ];
 
-    public function order()
+    protected $casts = [
+        'order_date' => 'date',
+        'busy_synced_at' => 'datetime',
+
+        'sub_total' => 'decimal:2',
+        'discount' => 'decimal:2',
+        'total_tax' => 'decimal:2',
+        'delivery_charge' => 'decimal:2',
+        'grand_total' => 'decimal:2',
+    ];
+
+    /*
+    |--------------------------------------------------------------------------
+    | Customer
+    |--------------------------------------------------------------------------
+    */
+
+    public function client(): BelongsTo
     {
-        return $this->belongsTo(Order::class);
+        return $this->belongsTo(
+            Client::class,
+            'client_id'
+        );
     }
 
-    public function product()
-    {
-        return $this->belongsTo(Product::class);
-    }
+    /*
+    |--------------------------------------------------------------------------
+    | Order Details
+    |--------------------------------------------------------------------------
+    */
 
-    public function customer()
+    public function details(): HasMany
     {
-        return $this->belongsTo(Customer::class);
+        return $this->hasMany(
+            OrderDetail::class,
+            'order_id'
+        )->orderBy('sort_order');
     }
 }
