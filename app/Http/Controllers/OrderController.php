@@ -18,21 +18,12 @@ class OrderController extends Controller
 
     public function index(Request $request)
     {
-
         $companyId = 1;
-        $query = Order::query()
-            ->where('company_id', $companyId)
-            ->with('client')
-            ->withCount('details');
+        $query = Order::query()->where('company_id', $companyId)->with('client')->withCount('details');
 
-        /*
-    |--------------------------------------------------------------------------
-    | Search
-    |--------------------------------------------------------------------------
-    */
+        /* Search */
         if ($request->filled('search')) {
             $search = trim($request->search);
-
             $query->where(function ($q) use ($search) {
                 $q->where('order_no', 'like', "%{$search}%")
                     ->orWhere('busyorder_id', 'like', "%{$search}%")
@@ -43,83 +34,38 @@ class OrderController extends Controller
             });
         }
 
-        /*
-    |--------------------------------------------------------------------------
-    | Order Status
-    |--------------------------------------------------------------------------
-    */
+        /* Order Status */
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
-
-        /*
-    |--------------------------------------------------------------------------
-    | BUSY Sync Status
-    |--------------------------------------------------------------------------
-    */
+        /*BUSY Sync Status */
         if ($request->filled('busy_sync_status')) {
-            $query->where(
-                'busy_sync_status',
-                $request->busy_sync_status
-            );
+            $query->where('busy_sync_status', $request->busy_sync_status);
         }
 
-        /*
-    |--------------------------------------------------------------------------
-    | Date Filter
-    |--------------------------------------------------------------------------
-    */
+        /* Date Filter */
         if ($request->filled('from_date')) {
-            $query->whereDate(
-                'order_date',
-                '>=',
-                $request->from_date
-            );
+            $query->whereDate('order_date', '>=', $request->from_date);
         }
 
         if ($request->filled('to_date')) {
-            $query->whereDate(
-                'order_date',
-                '<=',
-                $request->to_date
-            );
+            $query->whereDate('order_date', '<=', $request->to_date);
         }
 
-        /*
-    |--------------------------------------------------------------------------
-    | Pagination
-    |--------------------------------------------------------------------------
-    */
-        $orders = $query
-            ->latest('id')
-            ->paginate(20)
-            ->withQueryString();
+        /* Pagination */
+        $orders = $query->latest('id')->paginate(20)->withQueryString();
 
-        /*
-    |--------------------------------------------------------------------------
-    | Summary
-    |--------------------------------------------------------------------------
-    */
-        $summaryQuery = Order::query()
-            ->where('company_id', $companyId);
-
+        /*Summary */
+        $summaryQuery = Order::query()->where('company_id', $companyId);
         $totalOrders = (clone $summaryQuery)->count();
-
-        $syncedOrders = (clone $summaryQuery)
-            ->where('busy_sync_status', 'synced')
-            ->count();
-
+        $syncedOrders = (clone $summaryQuery)->where('busy_sync_status', 'synced')->count();
         $pendingOrders = (clone $summaryQuery)
             ->where(function ($q) {
                 $q->whereNull('busy_sync_status')
                     ->orWhere('busy_sync_status', 'pending');
-            })
-            ->count();
+            })->count();
 
-        $failedOrders = (clone $summaryQuery)
-            ->where('busy_sync_status', 'failed')
-            ->count();
-
+        $failedOrders = (clone $summaryQuery)->where('busy_sync_status', 'failed')->count();
         return view('orders.index', compact(
             'orders',
             'totalOrders',
@@ -134,12 +80,7 @@ class OrderController extends Controller
     public function create(Request $request): View
     {
         $companyId = (int) ($request->user()?->company_id ?? 1);
-
-        /*
-        |--------------------------------------------------------------------------
-        | Clients
-        |--------------------------------------------------------------------------
-        */
+        /*Clients */
         $clients = DB::table('parties_busy')
             ->where('company_id', $companyId)
             ->where(function ($query) {
@@ -155,18 +96,9 @@ class OrderController extends Controller
                 'busyparty_id',
             ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | Products
-        |--------------------------------------------------------------------------
-        */
+        /*Products */
         $products = DB::table('products')
-            ->leftJoin(
-                'unit_types',
-                'unit_types.id',
-                '=',
-                'products.unit'
-            )
+            ->leftJoin('unit_types', 'unit_types.id', '=', 'products.unit')
             ->where('products.company_id', $companyId)
             ->where(function ($query) {
                 $query->whereNull('products.status')
@@ -184,11 +116,7 @@ class OrderController extends Controller
                 'unit_types.symbol as unit_symbol',
             ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | Taxes
-        |--------------------------------------------------------------------------
-        */
+        /*Taxes */
         $taxes = DB::table('tax_types')
             ->where('company_id', $companyId)
             ->orderBy('percent')
@@ -201,16 +129,11 @@ class OrderController extends Controller
                 'busytax_id',
             ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | Units
-        |--------------------------------------------------------------------------
-        */
+        /*Units */
         $units = DB::table('unit_types')
             ->where('company_id', $companyId)
             ->where(function ($query) {
-                $query->whereNull('status')
-                    ->orWhere('status', '!=', 'Inactive');
+                $query->whereNull('status')->orWhere('status', '!=', 'Inactive');
             })
             ->orderBy('name')
             ->get([
@@ -314,12 +237,7 @@ class OrderController extends Controller
             ],
         ]);
 
-        /*
-        |--------------------------------------------------------------------------
-        | Security: ensure selected records belong to this company
-        |--------------------------------------------------------------------------
-        */
-
+        /*Security: ensure selected records belong to this company */
         $client = DB::table('parties_busy')
             ->where('id', $validated['client_id'])
             ->where('company_id', $companyId)
@@ -378,10 +296,7 @@ class OrderController extends Controller
 
         foreach ($validated['products'] as $index => $row) {
 
-            if (
-                !empty($row['unit_id']) &&
-                !$validUnits->has((int) $row['unit_id'])
-            ) {
+            if (!empty($row['unit_id']) && !$validUnits->has((int) $row['unit_id'])) {
                 return back()
                     ->withInput()
                     ->withErrors([
@@ -390,10 +305,7 @@ class OrderController extends Controller
                     ]);
             }
 
-            if (
-                !empty($row['tax_id']) &&
-                !$validTaxes->has((int) $row['tax_id'])
-            ) {
+            if (!empty($row['tax_id']) && !$validTaxes->has((int) $row['tax_id'])) {
                 return back()
                     ->withInput()
                     ->withErrors([
@@ -402,131 +314,57 @@ class OrderController extends Controller
                     ]);
             }
         }
-
         try {
-
-            $order = DB::transaction(function () use (
-                $validated,
-                $companyId,
-                $validTaxes
-            ) {
-
+            $order = DB::transaction(function () use ($validated, $companyId, $validTaxes) {
                 $subTotal = 0;
                 $totalDiscount = 0;
                 $totalTax = 0;
-
                 $preparedDetails = [];
-
-                /*
-                |--------------------------------------------------------------------------
-                | Calculate every line
-                |--------------------------------------------------------------------------
-                */
-
+                /*Calculate every line */
                 foreach ($validated['products'] as $index => $row) {
-
                     $quantity = (float) $row['quantity'];
                     $rate = (float) $row['rate'];
-
-                    $grossAmount = round(
-                        $quantity * $rate,
-                        2
-                    );
-
-                    $discountValue = (float) (
-                        $row['discount'] ?? 0
-                    );
-
-                    $discountType = $row['discount_type']
-                        ?? 'percent';
-
+                    $grossAmount = round($quantity * $rate, 2);
+                    $discountValue = (float) ($row['discount'] ?? 0);
+                    $discountType = $row['discount_type'] ?? 'percent';
                     if ($discountType === 'percent') {
-
-                        $discountAmount = round(
-                            ($grossAmount * $discountValue) / 100,
-                            2
-                        );
+                        $discountAmount = round(($grossAmount * $discountValue) / 100, 2);
                     } else {
-
-                        $discountAmount = round(
-                            $discountValue,
-                            2
-                        );
+                        $discountAmount = round($discountValue, 2);
                     }
+                    /*Never allow discount greater than line amount */
 
-                    /*
-                    |--------------------------------------------------------------------------
-                    | Never allow discount greater than line amount
-                    |--------------------------------------------------------------------------
-                    */
-
-                    $discountAmount = min(
-                        $discountAmount,
-                        $grossAmount
-                    );
-
-                    $taxableAmount = round(
-                        $grossAmount - $discountAmount,
-                        2
-                    );
-
+                    $discountAmount = min($discountAmount, $grossAmount);
+                    $taxableAmount = round($grossAmount - $discountAmount, 2);
                     $taxRate = 0;
-
                     if (!empty($row['tax_id'])) {
-                        $tax = $validTaxes->get(
-                            (int) $row['tax_id']
-                        );
-
-                        $taxRate = (float) (
-                            $tax?->percent ?? 0
-                        );
+                        $tax = $validTaxes->get((int) $row['tax_id']);
+                        $taxRate = (float) ($tax?->percent ?? 0);
                     }
 
-                    $taxAmount = round(
-                        ($taxableAmount * $taxRate) / 100,
-                        2
-                    );
+                    $taxAmount = round(($taxableAmount * $taxRate) / 100, 2);
 
-                    $lineAmount = round(
-                        $taxableAmount + $taxAmount,
-                        2
-                    );
+                    $lineAmount = round($taxableAmount + $taxAmount, 2);
 
-                    $appliedRate = $quantity > 0
-                        ? round(
-                            $taxableAmount / $quantity,
-                            4
-                        )
-                        : 0;
-
+                    $appliedRate = $quantity > 0 ? round($taxableAmount / $quantity, 4) : 0;
                     $subTotal += $grossAmount;
                     $totalDiscount += $discountAmount;
                     $totalTax += $taxAmount;
 
                     $preparedDetails[] = [
                         'product_id' => (int) $row['product_id'],
-                        'unit_id' => !empty($row['unit_id'])
-                            ? (int) $row['unit_id']
-                            : null,
-                        'tax_id' => !empty($row['tax_id'])
-                            ? (int) $row['tax_id']
-                            : null,
-
+                        'unit_id' => !empty($row['unit_id']) ? (int) $row['unit_id'] : null,
+                        'tax_id' => !empty($row['tax_id']) ? (int) $row['tax_id'] : null,
                         'rate' => $rate,
                         'quantity' => $quantity,
-
                         'discount' => $discountValue,
                         'discount_type' => $discountType,
                         'discount_amount' => $discountAmount,
-
                         'applied_rate' => $appliedRate,
-
                         'tax_rate' => $taxRate,
                         'tax_amount' => $taxAmount,
-
                         'taxable_amount' => $taxableAmount,
                         'amount' => $lineAmount,
-
                         'description' => $row['description'] ?? null,
                         'sort_order' => $index,
                     ];
@@ -535,11 +373,7 @@ class OrderController extends Controller
                 $subTotal = round($subTotal, 2);
                 $totalDiscount = round($totalDiscount, 2);
                 $totalTax = round($totalTax, 2);
-
-                $deliveryCharge = round(
-                    (float) ($validated['delivery_charge'] ?? 0),
-                    2
-                );
+                $deliveryCharge = round((float) ($validated['delivery_charge'] ?? 0), 2);
 
                 $grandTotal = round(
                     $subTotal
@@ -549,66 +383,27 @@ class OrderController extends Controller
                     2
                 );
 
-                /*
-                |--------------------------------------------------------------------------
-                | Generate internal order number
-                |--------------------------------------------------------------------------
-                */
-
-                $nextId = (int) (
-                    DB::table('orders')->max('id') ?? 0
-                ) + 1;
-
-                $orderNo = 'ORD-' . str_pad(
-                    (string) $nextId,
-                    6,
-                    '0',
-                    STR_PAD_LEFT
-                );
-
-                /*
-                |--------------------------------------------------------------------------
-                | Create Order
-                |--------------------------------------------------------------------------
-                */
-
+                /*Generate internal order number*/
+                $nextId = (int) (DB::table('orders')->max('id') ?? 0) + 1;
+                $orderNo = 'ORD-' . str_pad((string) $nextId, 6, '0', STR_PAD_LEFT);
+                /* Create Order */
                 $order = Order::create([
                     'company_id' => $companyId,
-
                     'client_id' => $validated['client_id'],
-
-                    /*
-                    | BUSY ID is intentionally NULL here.
-                    | It will be populated after successful BUSY sync.
-                    */
+                    /*BUSY ID is intentionally NULL here. - It will be populated after successful BUSY sync.*/
                     'busyorder_id' => null,
-
                     'order_no' => $orderNo,
-
                     'order_date' => $validated['order_date'],
-
-                    'order_to_id' =>
-                    $validated['order_to_id'] ?? null,
-
-                    'order_notes' =>
-                    $validated['order_notes'] ?? null,
-
+                    'order_to_id' => $validated['order_to_id'] ?? null,
+                    'order_notes' => $validated['order_notes'] ?? null,
                     'sub_total' => $subTotal,
-
                     'discount' => $totalDiscount,
-
                     'total_tax' => $totalTax,
-
                     'delivery_charge' => $deliveryCharge,
-
                     'grand_total' => $grandTotal,
-
                     'status' => 'Pending',
-
                     'busy_sync_status' => 'Pending',
-
                     'busy_sync_message' => null,
-
                     'busy_synced_at' => null,
                 ]);
 

@@ -43,7 +43,7 @@ class BusyToDsaPartyOutstanding
                     (string) ($outstanding['name'] ?? '')
                 );
                 $amount = (float) (
-                    $outstanding['outstanding_amount'] ?? 0
+                    $outstanding['due_amount'] ?? 0
                 );
                 if ($masterCode === '') {
                     $result['skipped']++;
@@ -52,7 +52,7 @@ class BusyToDsaPartyOutstanding
                         [
                             'company_id' => $companyId,
                             'name' => $name,
-                            'outstanding_amount' => $amount,
+                            'due_amount' => $amount,
                         ]
                     );
                     continue;
@@ -75,7 +75,7 @@ class BusyToDsaPartyOutstanding
                             'company_id' => $companyId,
                             'master_code' => $masterCode,
                             'name' => $name,
-                            'outstanding_amount' => $amount,
+                            'due_amount' => $amount,
                         ]
                     );
                     continue;
@@ -84,7 +84,7 @@ class BusyToDsaPartyOutstanding
                 DB::table('parties_busy')
                     ->where('id', $party->id)
                     ->update([
-                        'outstanding_amount' => round($amount, 2),
+                        'due_amount' => round($amount, 2),
                         'updated_at' => now(),
                     ]);
                 $result['updated']++;
@@ -95,7 +95,7 @@ class BusyToDsaPartyOutstanding
                         'party_id' => $party->id,
                         'busyparty_id' => $masterCode,
                         'party_name' => $name,
-                        'outstanding_amount' => round($amount, 2),
+                        'due_amount' => round($amount, 2),
                     ]
                 );
             }
