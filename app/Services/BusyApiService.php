@@ -538,73 +538,7 @@ class BusyApiService
      *     ],
      * ]
      */
-    // public function getCustomerOutstanding(): array
-    // {
-    //     $query = "SELECT M.Code AS MasterCode, M.Name AS Name, SUM(T.Value1) AS OutstandingAmount FROM MASTER1 M LEFT JOIN TRAN2 T ON T.MasterCode1 = M.Code WHERE M.MASTERTYPE = 2 AND M.PARENTGRP = 116 GROUP BY M.Code, M.Name ORDER BY M.Name";
-    //     Log::channel('busy')->info('BUSY Customer Outstanding Query', [
-    //         'query' => $query,
-    //     ]);
-    //     $response = $this->executeQuery($query);
-    //     if (!($response['success'] ?? false)) {
-    //         return $response;
-    //     }
-    //     $body = trim((string) ($response['body'] ?? ''));
-    //     if ($body === '') {
-    //         return [
-    //             ...$response,
-    //             'outstandings' => [],
-    //         ];
-    //     }
-    //     libxml_use_internal_errors(true);
-    //     $xml = simplexml_load_string($body);
-    //     if ($xml === false) {
-    //         Log::channel('busy')->error(
-    //             'Failed to parse BUSY customer outstanding XML',
-    //             [
-    //                 'body' => $body,
-    //                 'errors' => libxml_get_errors(),
-    //             ]
-    //         );
-    //         libxml_clear_errors();
-    //         return [
-    //             ...$response,
-    //             'success' => false,
-    //             'description' => 'Unable to parse BUSY customer outstanding XML.',
-    //             'outstandings' => [],
-    //         ];
-    //     }
-    //     $xml->registerXPathNamespace('z', '#RowsetSchema');
-    //     $rows = $xml->xpath('//z:row') ?: [];
-    //     $outstandings = [];
-    //     foreach ($rows as $row) {
-    //         $attributes = $row->attributes();
-    //         $masterCode = trim((string) ($attributes['MasterCode'] ?? ''));
-    //         $name = trim((string) ($attributes['Name'] ?? ''));
-    //         if ($masterCode === '') {
-    //             continue;
-    //         }
-    //         $amount = (float) (
-    //             $attributes['OutstandingAmount']
-    //             ?? 0
-    //         );
-    //         $outstandings[] = [
-    //             'master_code' => $masterCode,
-    //             'name' => $name,
-    //             'outstanding_amount' => round($amount, 2),
-    //         ];
-    //     }
-    //     Log::channel('busy')->info(
-    //         'BUSY Customer Outstanding Fetched',
-    //         [
-    //             'count' => count($outstandings),
-    //             'outstandings' => $outstandings,
-    //         ]
-    //     );
-    //     return [
-    //         ...$response,
-    //         'outstandings' => $outstandings,
-    //     ];
-    // }
+  
     public function getCustomerOutstanding(): array
     {
         $query = "SELECT M.Code AS MasterCode, M.Name AS Name, SUM(T.Value1) AS OutstandingAmount FROM MASTER1 M LEFT JOIN TRAN2 T ON T.MasterCode1 = M.Code WHERE M.MASTERTYPE = 2 AND M.PARENTGRP = 116 GROUP BY M.Code, M.Name";
@@ -741,45 +675,7 @@ class BusyApiService
      * SC = 2
      * VchType = 9 => Sale Voucher
      */
-    // public function createSaleVoucher(string $voucherXml): array
-    // {
-    //     $response = Http::timeout(60)
-    //         ->withHeaders([
-    //             'SC' => 2,
-    //             'VchType' => 9,
-    //             'VchXml' => $voucherXml,
-    //             'UserName' => 's',
-    //             'Pwd' => 's',
-    //         ])
-    //         ->get('http://127.0.0.1:981');
 
-    //     Log::channel('busy')->info('BUSY Sale Voucher Request', [
-    //         'url' => 'http://127.0.0.1:981',
-    //         'vch_type' => 9,
-    //         'xml' => $voucherXml,
-    //     ]);
-
-    //     Log::channel('busy')->info('BUSY Sale Voucher Response', [
-    //         'status' => $response->status(),
-    //         'body' => $response->body(),
-    //     ]);
-
-    //     if (!$response->successful()) {
-    //         return [
-    //             'success' => false,
-    //             'status' => $response->status(),
-    //             'description' => 'BUSY API request failed.',
-    //             'body' => $response->body(),
-    //         ];
-    //     }
-
-    //     return [
-    //         'success' => true,
-    //         'status' => $response->status(),
-    //         'body' => $response->body(),
-    //         'description' => '',
-    //     ];
-    // }
     public function createSaleVoucher(string $voucherXml): array
     {
         $response = Http::timeout(60)
@@ -818,6 +714,63 @@ class BusyApiService
             'status' => $response->status(),
             'body' => $response->body(),
             'description' => '',
+        ];
+    }
+    public function modifySaleVoucher(string $voucherXml): array
+    {
+        $response = Http::timeout(60)
+            ->withHeaders([
+                'SC' => 3,
+                'VchType' => 9,
+                'VchXml' => $voucherXml,
+                'ModifyKey' => 3,
+                'UserName' => 's',
+                'Pwd' => 's',
+            ])
+            ->get('http://127.0.0.1:981');
+
+        Log::channel('busy')->info('BUSY Sale Voucher Modify Request', [
+            'url' => 'http://127.0.0.1:981',
+            'sc' => 3,
+            'vch_type' => 9,
+            'modify_key' => 3,
+            'xml' => $voucherXml,
+        ]);
+
+        Log::channel('busy')->info('BUSY Sale Voucher Modify Response', [
+            'status' => $response->status(),
+            'body' => $response->body(),
+            'headers' => $response->headers(),
+        ]);
+
+        if (!$response->successful()) {
+            return [
+                'success' => false,
+                'status' => $response->status(),
+                'description' => 'BUSY API request failed.',
+                'body' => $response->body(),
+            ];
+        }
+
+        $result = strtoupper((string) $response->header('Result'));
+        $description = (string) ($response->header('Description') ?? '');
+
+        if ($result !== 'T') {
+            return [
+                'success' => false,
+                'status' => $response->status(),
+                'result' => $result,
+                'description' => $description ?: 'BUSY rejected the voucher modification.',
+                'body' => $response->body(),
+            ];
+        }
+
+        return [
+            'success' => true,
+            'status' => $response->status(),
+            'result' => $result,
+            'body' => $response->body(),
+            'description' => $description,
         ];
     }
 }

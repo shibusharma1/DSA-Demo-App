@@ -443,6 +443,593 @@ class OrderController extends Controller
     }
 
     /**
+     * Display the edit order page.
+     */
+    public function edit(Request $request, Order $order): View
+    {
+        $companyId = (int) ($request->user()?->company_id ?? 1);
+
+        /*
+    |--------------------------------------------------------------------------
+    | Security
+    |--------------------------------------------------------------------------
+    */
+
+        if ((int) $order->company_id !== $companyId) {
+            abort(404);
+        }
+
+        /*
+    |--------------------------------------------------------------------------
+    | Load Order
+    |--------------------------------------------------------------------------
+    */
+
+        $order->load([
+            'client',
+            'details.product',
+            'details.unit',
+            'details.tax',
+        ]);
+
+        /*
+    |--------------------------------------------------------------------------
+    | Clients
+    |--------------------------------------------------------------------------
+    */
+
+        $clients = DB::table('parties_busy')
+            ->where('company_id', $companyId)
+            ->where(function ($query) {
+                $query->whereNull('status')
+                    ->orWhere('status', '!=', 'Inactive');
+            })
+            ->orderByRaw('COALESCE(name, company_name)')
+            ->get([
+                'id',
+                'name',
+                'company_name',
+                'mobile',
+                'busyparty_id',
+            ]);
+
+        /*
+    |--------------------------------------------------------------------------
+    | Products
+    |--------------------------------------------------------------------------
+    */
+
+        $products = DB::table('products')
+            ->leftJoin(
+                'unit_types',
+                'unit_types.id',
+                '=',
+                'products.unit'
+            )
+            ->where('products.company_id', $companyId)
+            ->where(function ($query) {
+                $query->whereNull('products.status')
+                    ->orWhere('products.status', '!=', 'Inactive');
+            })
+            ->orderBy('products.product_name')
+            ->get([
+                'products.id',
+                'products.product_name',
+                'products.product_code',
+                'products.mrp',
+                'products.busyproduct_id',
+                'products.unit',
+                'unit_types.name as unit_name',
+                'unit_types.symbol as unit_symbol',
+            ]);
+
+        /*
+    |--------------------------------------------------------------------------
+    | Taxes
+    |--------------------------------------------------------------------------
+    */
+
+        $taxes = DB::table('tax_types')
+            ->where('company_id', $companyId)
+            ->orderBy('percent')
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'display_name',
+                'percent',
+                'busytax_id',
+            ]);
+
+        /*
+    |--------------------------------------------------------------------------
+    | Units
+    |--------------------------------------------------------------------------
+    */
+
+        $units = DB::table('unit_types')
+            ->where('company_id', $companyId)
+            ->where(function ($query) {
+                $query->whereNull('status')
+                    ->orWhere('status', '!=', 'Inactive');
+            })
+            ->orderBy('name')
+            ->get([
+                'id',
+                'name',
+                'symbol',
+                'busyunit_id',
+            ]);
+
+        /*
+    |--------------------------------------------------------------------------
+    | Existing Product Details
+    |--------------------------------------------------------------------------
+    */
+
+        $existingProducts = $order->details
+            ->sortBy('sort_order')
+            ->values()
+            ->map(function ($detail) {
+                return [
+                    'id' => $detail->id,
+                    'product_id' => (int) $detail->product_id,
+                    'unit_id' => $detail->unit_id
+                        ? (int) $detail->unit_id
+                        : null,
+                    'tax_id' => $detail->tax_id
+                        ? (int) $detail->tax_id
+                        : null,
+                    'rate' => (float) $detail->rate,
+                    'quantity' => (float) $detail->quantity,
+                    'discount' => (float) ($detail->discount ?? 0),
+                    'discount_type' => $detail->discount_type ?? 'percent',
+                    'description' => $detail->description ?? '',
+                ];
+            });
+
+        return view('orders.edit', compact(
+            'order',
+            'clients',
+            'products',
+            'taxes',
+            'units',
+            'existingProducts'
+        ));
+    }
+    /**
+     * Update an existing order.
+     */
+    public function update(
+        Request $request,
+        Order $order
+    ): RedirectResponse {
+
+        $companyId = (int) ($request->user()?->company_id ?? 1);
+
+        /*
+    |--------------------------------------------------------------------------
+    | Security
+    |--------------------------------------------------------------------------
+    */
+
+        if ((int) $order->company_id !== $companyId) {
+            abort(404);
+        }
+
+        /*
+    |--------------------------------------------------------------------------
+    | Validation
+    |--------------------------------------------------------------------------
+    */
+
+        $validated = $request->validate([
+            'client_id' => [
+                'required',
+                'integer',
+                'exists:parties_busy,id',
+            ],
+
+            'order_date' => [
+                'required',
+                'date',
+            ],
+
+            'order_to_id' => [
+                'nullable',
+                'integer',
+            ],
+
+            'order_notes' => [
+                'nullable',
+                'string',
+                'max:10000',
+            ],
+
+            'delivery_charge' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
+
+            'products' => [
+                'required',
+                'array',
+                'min:1',
+            ],
+
+            'products.*.product_id' => [
+                'required',
+                'integer',
+                'exists:products,id',
+            ],
+
+            'products.*.unit_id' => [
+                'nullable',
+                'integer',
+                'exists:unit_types,id',
+            ],
+
+            'products.*.tax_id' => [
+                'nullable',
+                'integer',
+                'exists:tax_types,id',
+            ],
+
+            'products.*.quantity' => [
+                'required',
+                'numeric',
+                'gt:0',
+            ],
+
+            'products.*.rate' => [
+                'required',
+                'numeric',
+                'min:0',
+            ],
+
+            'products.*.discount' => [
+                'nullable',
+                'numeric',
+                'min:0',
+            ],
+
+            'products.*.discount_type' => [
+                'nullable',
+                'in:percent,amount',
+            ],
+
+            'products.*.description' => [
+                'nullable',
+                'string',
+                'max:1000',
+            ],
+        ]);
+
+        /*
+    |--------------------------------------------------------------------------
+    | Validate Customer
+    |--------------------------------------------------------------------------
+    */
+
+        $client = DB::table('parties_busy')
+            ->where('id', $validated['client_id'])
+            ->where('company_id', $companyId)
+            ->first();
+
+        if (!$client) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'client_id' =>
+                    'The selected customer does not belong to this company.',
+                ]);
+        }
+
+        /*
+    |--------------------------------------------------------------------------
+    | Validate Products
+    |--------------------------------------------------------------------------
+    */
+
+        $productIds = collect($validated['products'])
+            ->pluck('product_id')
+            ->unique()
+            ->values();
+
+        $validProducts = DB::table('products')
+            ->where('company_id', $companyId)
+            ->whereIn('id', $productIds)
+            ->get()
+            ->keyBy('id');
+
+        if ($validProducts->count() !== $productIds->count()) {
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'products' =>
+                    'One or more selected products are invalid.',
+                ]);
+        }
+
+        /*
+    |--------------------------------------------------------------------------
+    | Validate Units
+    |--------------------------------------------------------------------------
+    */
+
+        $unitIds = collect($validated['products'])
+            ->pluck('unit_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $validUnits = DB::table('unit_types')
+            ->where('company_id', $companyId)
+            ->whereIn('id', $unitIds)
+            ->pluck('id')
+            ->flip();
+
+        /*
+    |--------------------------------------------------------------------------
+    | Validate Taxes
+    |--------------------------------------------------------------------------
+    */
+
+        $taxIds = collect($validated['products'])
+            ->pluck('tax_id')
+            ->filter()
+            ->unique()
+            ->values();
+
+        $validTaxes = DB::table('tax_types')
+            ->where('company_id', $companyId)
+            ->whereIn('id', $taxIds)
+            ->get()
+            ->keyBy('id');
+
+        foreach ($validated['products'] as $index => $row) {
+
+            if (
+                !empty($row['unit_id']) &&
+                !$validUnits->has((int) $row['unit_id'])
+            ) {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        "products.$index.unit_id" =>
+                        'The selected unit is invalid.',
+                    ]);
+            }
+
+            if (
+                !empty($row['tax_id']) &&
+                !$validTaxes->has((int) $row['tax_id'])
+            ) {
+                return back()
+                    ->withInput()
+                    ->withErrors([
+                        "products.$index.tax_id" =>
+                        'The selected tax is invalid.',
+                    ]);
+            }
+        }
+
+        try {
+
+            DB::transaction(function () use (
+                $validated,
+                $order,
+                $companyId,
+                $validTaxes
+            ) {
+
+                $subTotal = 0;
+                $totalDiscount = 0;
+                $totalTax = 0;
+
+                $preparedDetails = [];
+
+                foreach ($validated['products'] as $index => $row) {
+
+                    $quantity = (float) $row['quantity'];
+                    $rate = (float) $row['rate'];
+
+                    $grossAmount = round(
+                        $quantity * $rate,
+                        2
+                    );
+
+                    $discountValue =
+                        (float) ($row['discount'] ?? 0);
+
+                    $discountType =
+                        $row['discount_type'] ?? 'percent';
+
+                    if ($discountType === 'percent') {
+
+                        $discountAmount = round(
+                            ($grossAmount * $discountValue) / 100,
+                            2
+                        );
+                    } else {
+
+                        $discountAmount = round(
+                            $discountValue,
+                            2
+                        );
+                    }
+
+                    $discountAmount = min(
+                        $discountAmount,
+                        $grossAmount
+                    );
+
+                    $taxableAmount = round(
+                        $grossAmount - $discountAmount,
+                        2
+                    );
+
+                    $taxRate = 0;
+
+                    if (!empty($row['tax_id'])) {
+
+                        $tax = $validTaxes->get(
+                            (int) $row['tax_id']
+                        );
+
+                        $taxRate = (float) (
+                            $tax?->percent ?? 0
+                        );
+                    }
+
+                    $taxAmount = round(
+                        ($taxableAmount * $taxRate) / 100,
+                        2
+                    );
+
+                    $lineAmount = round(
+                        $taxableAmount + $taxAmount,
+                        2
+                    );
+
+                    $appliedRate =
+                        $quantity > 0
+                        ? round(
+                            $taxableAmount / $quantity,
+                            4
+                        )
+                        : 0;
+
+                    $subTotal += $grossAmount;
+                    $totalDiscount += $discountAmount;
+                    $totalTax += $taxAmount;
+
+                    $preparedDetails[] = [
+                        'product_id' => (int) $row['product_id'],
+
+                        'unit_id' => !empty($row['unit_id'])
+                            ? (int) $row['unit_id']
+                            : null,
+
+                        'tax_id' => !empty($row['tax_id'])
+                            ? (int) $row['tax_id']
+                            : null,
+
+                        'rate' => $rate,
+                        'quantity' => $quantity,
+
+                        'discount' => $discountValue,
+                        'discount_type' => $discountType,
+                        'discount_amount' => $discountAmount,
+
+                        'applied_rate' => $appliedRate,
+
+                        'tax_rate' => $taxRate,
+                        'tax_amount' => $taxAmount,
+
+                        'taxable_amount' => $taxableAmount,
+                        'amount' => $lineAmount,
+
+                        'description' =>
+                        $row['description'] ?? null,
+
+                        'sort_order' => $index,
+                    ];
+                }
+
+                $subTotal = round($subTotal, 2);
+                $totalDiscount = round($totalDiscount, 2);
+                $totalTax = round($totalTax, 2);
+
+                $deliveryCharge = round(
+                    (float) ($validated['delivery_charge'] ?? 0),
+                    2
+                );
+
+                $grandTotal = round(
+                    $subTotal
+                        - $totalDiscount
+                        + $totalTax
+                        + $deliveryCharge,
+                    2
+                );
+
+                /*
+            |--------------------------------------------------------------------------
+            | Update Order
+            |--------------------------------------------------------------------------
+            */
+
+                $order->update([
+                    'client_id' => $validated['client_id'],
+                    'order_date' => $validated['order_date'],
+                    'order_to_id' =>
+                    $validated['order_to_id'] ?? null,
+
+                    'order_notes' =>
+                    $validated['order_notes'] ?? null,
+
+                    'sub_total' => $subTotal,
+                    'discount' => $totalDiscount,
+                    'total_tax' => $totalTax,
+
+                    'delivery_charge' =>
+                    $deliveryCharge,
+
+                    'grand_total' =>
+                    $grandTotal,
+
+                    /*
+                |--------------------------------------------------------------------------
+                | Existing BUSY voucher must be re-synchronized
+                |--------------------------------------------------------------------------
+                */
+
+                    'busy_sync_status' =>
+                    $order->busyorder_id
+                        ? 'Pending'
+                        : $order->busy_sync_status,
+
+                    'busy_sync_message' => null,
+                ]);
+
+                /*
+            |--------------------------------------------------------------------------
+            | Replace Details
+            |--------------------------------------------------------------------------
+            */
+
+                $order->details()->delete();
+
+                foreach ($preparedDetails as $detail) {
+
+                    $order->details()->create(
+                        $detail
+                    );
+                }
+            });
+
+            return redirect()
+                ->route('orders.show', $order->id)
+                ->with(
+                    'success',
+                    "Order {$order->order_no} updated successfully."
+                );
+        } catch (Throwable $e) {
+
+            report($e);
+
+            return back()
+                ->withInput()
+                ->withErrors([
+                    'order' =>
+                    'Unable to update the order. Please try again.',
+                ]);
+        }
+    }
+
+    /**
      * Display order.
      */
     public function show(Order $order): View
