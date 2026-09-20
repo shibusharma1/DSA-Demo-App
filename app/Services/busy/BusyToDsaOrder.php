@@ -135,10 +135,17 @@ class BusyToDsaOrder
             | Send to BUSY
             |--------------------------------------------------------------------------
             */
+            if ($order->busyorder_id) {
 
-            $response = $this->busyApiService
-                ->createSaleVoucher($xml);
+                // Existing BUSY voucher → MODIFY
+                $response = $this->busyApiService
+                    ->modifySaleVoucher($xml);
+            } else {
 
+                // New order → CREATE
+                $response = $this->busyApiService
+                    ->createSaleVoucher($xml);
+            }
             if (!($response['success'] ?? false)) {
 
                 throw new \RuntimeException(
@@ -706,7 +713,7 @@ class BusyToDsaOrder
                 $item,
                 'Amt',
                 $this->formatNumber(
-                    $detail->amount
+                  (float) $detail->quantity * (float) $detail->rate
                 )
             );
 
