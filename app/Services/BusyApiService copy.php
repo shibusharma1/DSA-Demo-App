@@ -8,53 +8,43 @@ use Illuminate\Support\Facades\Log;
 
 class BusyApiService
 {
-    private const DEFAULT_BASE_URL = 'http://127.0.0.1:981';
-    private const DEFAULT_USERNAME = 's';
-    private const DEFAULT_PASSWORD = 's';
-    private const SALE_VOUCHER_TYPE = 9;
-
     private string $baseUrl;
     private string $username;
     private string $password;
 
     public function __construct()
     {
-        $this->baseUrl = rtrim(
-            (string) config('services.busy.base_url', self::DEFAULT_BASE_URL),
-            '/'
-        );
-        $this->username = (string) config('services.busy.username', self::DEFAULT_USERNAME);
-        $this->password = (string) config('services.busy.password', self::DEFAULT_PASSWORD);
+        $this->baseUrl = rtrim(config('services.busy.base_url'), 'http://127.0.0.1:981');
+        $this->username = config('services.busy.username', 's');
+        $this->password = config('services.busy.password', 's');
     }
 
-    /**
-     * Send a request to BUSY and normalize the response.
-     *
-     * BUSY can return HTTP 200 even when the business operation fails.
-     * Therefore Result=T is required for a successful response.
-     */
     public function request(array $headers): array
     {
         try {
-            $headers = $this->withAuthentication($headers);
-            $this->logRequest($headers);
+            $headers['UserName'] = $this->username;
+            $headers['Pwd'] = $this->password;
 
-            $response = Http::timeout(60)
-                ->withHeaders($headers)
-                ->get($this->baseUrl);
+            Log::channel('busy')->info('BUSY Request', [
+                'url' => $this->baseUrl,
+                'headers' => $headers,
+            ]);
 
-            $result = strtoupper((string) $response->header('Result'));
-            $description = trim((string) $response->header('Description'));
-            $body = $response->body();
+            // $response = Http::withHeaders($headers)->get($this->baseUrl);
+            $response = Http::withHeaders($headers)->get('http://127.0.0.1:981');
 
-            $this->logResponse($response->status(), $result, $description, $body);
+            Log::channel('busy')->info('BUSY Response', [
+                'status' => $response->status(),
+                'result' => $response->header('Result'),
+                'description' => $response->header('Description'),
+            ]);
 
             return [
-                'success' => $response->successful() && $result === 'T',
+                'success' => $response->successful() && $response->header('Result') === 'T',
                 'status' => $response->status(),
-                'result' => $result,
-                'description' => $description,
-                'body' => $body,
+                'result' => $response->header('Result'),
+                'description' => $response->header('Description'),
+                'body' => $response->body(),
             ];
         } catch (Exception $e) {
             Log::channel('busy')->error('BUSY Exception', [
@@ -72,42 +62,7 @@ class BusyApiService
         }
     }
 
-    private function withAuthentication(array $headers): array
-    {
-        return [
-            ...$headers,
-            'UserName' => $this->username,
-            'Pwd' => $this->password,
-        ];
-    }
-
-    private function logRequest(array $headers): void
-    {
-        Log::channel('busy')->info('BUSY Request', [
-            'url' => $this->baseUrl,
-            'headers' => $headers,
-        ]);
-    }
-
-    private function logResponse(
-        int $status,
-        string $result,
-        string $description,
-        string $body
-    ): void {
-        Log::channel('busy')->info('BUSY Response', [
-            'status' => $status,
-            'result' => $result,
-            'description' => $description,
-            'body' => $body,
-        ]);
-    }
-
-    // -------------------------------------------------------------------------
-    // Core BUSY API operations
-    // -------------------------------------------------------------------------
-
-    /** Execute SQL Query (SC=1). */
+    /** Execute SQL Query (SC=1).*/
     public function executeQuery(string $query): array
     {
         return $this->request([
@@ -152,10 +107,6 @@ class BusyApiService
         return $response['success'];
     }
 
-    // -------------------------------------------------------------------------
-    // Master data
-    // -------------------------------------------------------------------------
-
     /**
      * Fetch BUSY customers with complete master details.
      *
@@ -170,6 +121,7 @@ class BusyApiService
     {
         $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 2 AND PARENTGRP = 116";
         $response = $this->executeQuery($query);
+        Log::info("Complete log yaha h", [$response]);
         if (!($response['success'] ?? false)) {
             return $response;
         }
@@ -355,6 +307,7 @@ class BusyApiService
             return $response;
         }
         $body = trim($response['body'] ?? '');
+        Log::info("complete item body", [$body]);
         if ($body === '') {
             return [
                 ...$response,
@@ -388,6 +341,7 @@ class BusyApiService
             }
             // Fetch complete item details using BUSY GetMasterXML.
             $masterResponse = $this->getMaster((int) $masterCode);
+            Log::info("Completed master record", [$masterResponse]);
             if (!($masterResponse['success'] ?? false)) {
                 Log::channel('busy')->warning('Failed to fetch complete BUSY item', [
                     'master_code' => $masterCode,
@@ -464,10 +418,6 @@ class BusyApiService
             'items' => $completeItems,
         ];
     }
-
-    // -------------------------------------------------------------------------
-    // Voucher / transaction queries
-    // -------------------------------------------------------------------------
 
     /** Fetch BUSY receipt vouchers (VchType = 14).
      * TRAN2 may contain multiple rows for one receipt; group by VchCode.
@@ -546,10 +496,6 @@ class BusyApiService
             return null;
         }
     }
-    // -------------------------------------------------------------------------
-    // Lookup helpers
-    // -------------------------------------------------------------------------
-
     /** Find BUSY product by name. */
     public function findItemByName(string $name): array
     {
@@ -575,10 +521,6 @@ class BusyApiService
         }
         return str_contains($result['body'] ?? '', '<NAME>') || str_contains($result['body'] ?? '', $name);
     }
-
-    // -------------------------------------------------------------------------
-    // Outstanding / financial data
-    // -------------------------------------------------------------------------
 
     /**
      * Fetch current customer-wise outstanding amount from BUSY.
@@ -726,36 +668,109 @@ class BusyApiService
         ];
     }
 
-    // -------------------------------------------------------------------------
-    // Sales vouchers
-    // -------------------------------------------------------------------------
-
     /**
-     * Create a BUSY sale voucher.
+     * Create a BUSY voucher using XML.
      *
-     * BUSY: SC=2, VchType=9.
+     * BUSY:
+     * SC = 2
+     * VchType = 9 => Sale Voucher
      */
+
     public function createSaleVoucher(string $voucherXml): array
     {
-        return $this->request([
-            'SC' => 2,
-            'VchType' => self::SALE_VOUCHER_TYPE,
-            'VchXml' => $voucherXml,
-        ]);
-    }
+        $response = Http::timeout(60)
+            ->withHeaders([
+                'SC' => 2,
+                'VchType' => 9,
+                'VchXml' => $voucherXml,
+                'UserName' => 's',
+                'Pwd' => 's',
+            ])
+            ->get('http://127.0.0.1:981');
 
-    /**
-     * Modify an existing BUSY sale voucher.
-     *
-     * BUSY: SC=3, VchType=9, ModifyKey=3.
-     */
+        Log::channel('busy')->info('BUSY Sale Voucher Request', [
+            'url' => 'http://127.0.0.1:981',
+            'vch_type' => 9,
+            'xml' => $voucherXml,
+        ]);
+
+        Log::channel('busy')->info('BUSY Sale Voucher Response', [
+            'status' => $response->status(),
+            'body' => $response->body(),
+            'headers' => $response->headers(),
+        ]);
+
+        if (!$response->successful()) {
+            return [
+                'success' => false,
+                'status' => $response->status(),
+                'description' => 'BUSY API request failed.',
+                'body' => $response->body(),
+            ];
+        }
+
+        return [
+            'success' => true,
+            'status' => $response->status(),
+            'body' => $response->body(),
+            'description' => '',
+        ];
+    }
     public function modifySaleVoucher(string $voucherXml): array
     {
-        return $this->request([
-            'SC' => 3,
-            'VchType' => self::SALE_VOUCHER_TYPE,
-            'VchXml' => $voucherXml,
-            'ModifyKey' => 3,
+        $response = Http::timeout(60)
+            ->withHeaders([
+                'SC' => 3,
+                'VchType' => 9,
+                'VchXml' => $voucherXml,
+                'ModifyKey' => 3,
+                'UserName' => 's',
+                'Pwd' => 's',
+            ])
+            ->get('http://127.0.0.1:981');
+
+        Log::channel('busy')->info('BUSY Sale Voucher Modify Request', [
+            'url' => 'http://127.0.0.1:981',
+            'sc' => 3,
+            'vch_type' => 9,
+            'modify_key' => 3,
+            'xml' => $voucherXml,
         ]);
+
+        Log::channel('busy')->info('BUSY Sale Voucher Modify Response', [
+            'status' => $response->status(),
+            'body' => $response->body(),
+            'headers' => $response->headers(),
+        ]);
+
+        if (!$response->successful()) {
+            return [
+                'success' => false,
+                'status' => $response->status(),
+                'description' => 'BUSY API request failed.',
+                'body' => $response->body(),
+            ];
+        }
+
+        $result = strtoupper((string) $response->header('Result'));
+        $description = (string) ($response->header('Description') ?? '');
+
+        if ($result !== 'T') {
+            return [
+                'success' => false,
+                'status' => $response->status(),
+                'result' => $result,
+                'description' => $description ?: 'BUSY rejected the voucher modification.',
+                'body' => $response->body(),
+            ];
+        }
+
+        return [
+            'success' => true,
+            'status' => $response->status(),
+            'result' => $result,
+            'body' => $response->body(),
+            'description' => $description,
+        ];
     }
 }
