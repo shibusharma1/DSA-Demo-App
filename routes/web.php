@@ -78,9 +78,6 @@ Route::get('/busy/sync/outstandings', [BusySyncController::class, 'outstandings'
 Route::post('/orders/{order}/sync-busy', [OrderController::class, 'syncToBusy'])->name('orders.sync-busy');
 
 
-
-
-
 /* Orders */
 Route::get('/orders', [OrderController::class, 'index'])->name('orders.index');
 Route::get('/orders/create', [OrderController::class, 'create'])->name('orders.create');

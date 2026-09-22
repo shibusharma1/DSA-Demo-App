@@ -4,7 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\OrderDetail;
-use App\Services\busy\BusyToDsaOrder;
+use App\Services\busy\DsaToBusyOrder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -1093,30 +1093,11 @@ class OrderController extends Controller
     /**
      * Push an order to BUSY.
      */
-    public function syncToBusy(
-        Order $order,
-        BusyToDsaOrder $busyToDsaOrder
-    ): RedirectResponse {
-
-        $result = $busyToDsaOrder->pushOrder(
-            $order->id
-        );
-
+    public function syncToBusy(Order $order, DsaToBusyOrder $dsaToBusyOrder): RedirectResponse {
+        $result = $dsaToBusyOrder->pushOrder($order->id);
         if ($result['success']) {
-
-            return redirect()
-                ->route('orders.show', $order->id)
-                ->with(
-                    'success',
-                    $result['message']
-                );
+            return redirect()->route('orders.show', $order->id)->with('success', $result['message']);
         }
-
-        return redirect()
-            ->route('orders.show', $order->id)
-            ->withErrors([
-                'busy' => $result['error']
-                    ?? 'Unable to synchronize order with BUSY.',
-            ]);
+        return redirect()->route('orders.show', $order->id)->withErrors(['busy' => $result['error'] ?? 'Unable to synchronize order with BUSY.']);
     }
 }

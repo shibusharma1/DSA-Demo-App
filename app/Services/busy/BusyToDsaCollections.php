@@ -114,7 +114,6 @@ class BusyToDsaCollections
                         'status' => 'Active',
                         'updated_at' => $timestamp,
                     ];
-                    Log::info("Data to be saved in the collection", ['data' => $payload]);
                     DB::transaction(function () use (
                         $companyId,
                         $client,

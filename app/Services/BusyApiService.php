@@ -546,10 +546,7 @@ class BusyApiService
             return null;
         }
     }
-    // -------------------------------------------------------------------------
     // Lookup helpers
-    // -------------------------------------------------------------------------
-
     /** Find BUSY product by name. */
     public function findItemByName(string $name): array
     {
@@ -576,17 +573,12 @@ class BusyApiService
         return str_contains($result['body'] ?? '', '<NAME>') || str_contains($result['body'] ?? '', $name);
     }
 
-    // -------------------------------------------------------------------------
     // Outstanding / financial data
-    // -------------------------------------------------------------------------
-
     /**
      * Fetch current customer-wise outstanding amount from BUSY.
-     *
      * Customers are identified from MASTER1:
      * MASTERTYPE = 2
      * PARENTGRP = 116 (Sundry Debtors)
-     *
      * The result is grouped by MasterCode1 and returned as:
      * [
      *     [
@@ -606,13 +598,11 @@ class BusyApiService
         ]);
 
         $response = $this->executeQuery($query);
-
         if (!($response['success'] ?? false)) {
             Log::channel('busy')->error('BUSY Customer Outstanding Query Failed', [
                 'description' => $response['description'] ?? 'Unknown error',
                 'response' => $response,
             ]);
-
             return [
                 ...$response,
                 'outstandings' => [],
@@ -620,25 +610,17 @@ class BusyApiService
         }
 
         $body = trim((string) ($response['body'] ?? ''));
-
         if ($body === '') {
-            Log::channel('busy')->warning(
-                'BUSY Customer Outstanding returned empty response.'
-            );
-
+            Log::channel('busy')->warning('BUSY Customer Outstanding returned empty response.');
             return [
                 ...$response,
                 'outstandings' => [],
             ];
         }
-
         libxml_use_internal_errors(true);
-
         $xml = simplexml_load_string($body);
-
         if ($xml === false) {
             $errors = libxml_get_errors();
-
             Log::channel('busy')->error(
                 'Failed to parse BUSY customer outstanding XML',
                 [
@@ -646,9 +628,7 @@ class BusyApiService
                     'errors' => $errors,
                 ]
             );
-
             libxml_clear_errors();
-
             return [
                 ...$response,
                 'success' => false,
@@ -656,61 +636,32 @@ class BusyApiService
                 'outstandings' => [],
             ];
         }
-
         libxml_clear_errors();
-
-        /*
-     * BUSY returns query results using RowsetSchema.
-     */
+        /* BUSY returns query results using RowsetSchema.*/
         $xml->registerXPathNamespace('z', '#RowsetSchema');
-
         $rows = $xml->xpath('//z:row') ?: [];
-
         $outstandings = [];
-
         foreach ($rows as $row) {
             $attributes = $row->attributes();
-
-            $masterCode = trim(
-                (string) ($attributes['MasterCode'] ?? '')
-            );
-
-            $name = trim(
-                (string) ($attributes['Name'] ?? '')
-            );
-
+            $masterCode = trim((string) ($attributes['MasterCode'] ?? ''));
+            $name = trim((string) ($attributes['Name'] ?? ''));
             if ($masterCode === '') {
                 continue;
             }
-
-            $rawAmount = trim(
-                (string) ($attributes['OutstandingAmount'] ?? '0')
-            );
-
-            /*
-         * Handle empty / NULL values returned by BUSY.
-         */
+            $rawAmount = trim((string) ($attributes['OutstandingAmount'] ?? '0'));
+            /* Handle empty / NULL values returned by BUSY.*/
             if ($rawAmount === '') {
                 $rawAmount = '0';
             }
-
-            /*
-         * Remove commas if BUSY returns values such as:
-         * 1,25,000.50
-         */
+            /* Remove commas if BUSY returns values such as: 1,25,000.50 */
             $rawAmount = str_replace(',', '', $rawAmount);
-
-            $amount = is_numeric($rawAmount)
-                ? (float) $rawAmount
-                : 0.00;
-
+            $amount = is_numeric($rawAmount) ? (float) $rawAmount : 0.00;
             $outstandings[] = [
                 'master_code' => $masterCode,
                 'name' => $name,
                 'due_amount' => round($amount, 2),
             ];
         }
-
         Log::channel('busy')->info(
             'BUSY Customer Outstanding Fetched',
             [
@@ -726,15 +677,8 @@ class BusyApiService
         ];
     }
 
-    // -------------------------------------------------------------------------
     // Sales vouchers
-    // -------------------------------------------------------------------------
-
-    /**
-     * Create a BUSY sale voucher.
-     *
-     * BUSY: SC=2, VchType=9.
-     */
+    /**Create a BUSY sale voucher. BUSY: SC=2, VchType=9.*/
     public function createSaleVoucher(string $voucherXml): array
     {
         return $this->request([
@@ -744,11 +688,7 @@ class BusyApiService
         ]);
     }
 
-    /**
-     * Modify an existing BUSY sale voucher.
-     *
-     * BUSY: SC=3, VchType=9, ModifyKey=3.
-     */
+    /** Modify an existing BUSY sale voucher. BUSY: SC=3, VchType=9, ModifyKey=3.*/
     public function modifySaleVoucher(string $voucherXml): array
     {
         return $this->request([

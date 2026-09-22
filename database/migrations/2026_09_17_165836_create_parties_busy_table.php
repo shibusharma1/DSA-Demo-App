@@ -36,6 +36,7 @@ return new class extends Migration
 
             // Financial information
             $table->unsignedInteger('credit_days')->nullable();
+            $table->decimal('due_amount')->default('0');
             $table->decimal('opening_balance', 15, 2)->nullable();
             $table->decimal('closing_balance', 15, 2)->nullable();
 

@@ -135,13 +135,10 @@ class DsaToBusyProduct
         if ($value === null || $value === '') {
             return '0';
         }
-
         $value = str_replace(',', '', (string) $value);
-
         if (!is_numeric($value)) {
             return '0';
         }
-
         return rtrim(rtrim(number_format((float) $value, 2, '.', ''),'0'),'.');
     }
 

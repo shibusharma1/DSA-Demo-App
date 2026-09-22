@@ -264,7 +264,6 @@ class BusyToDsaItem
         if ($value === '' || $value === '-' || $value === '.') {
             return null;
         }
-
         return (float) $value;
     }
 }

@@ -46,14 +46,8 @@ class BusyToDsaUnit
             $result['inserted'] = $sync['inserted'];
             $result['updated'] = $sync['updated'];
             $result['skipped'] = $sync['skipped'];
-
-            $result['deactivated'] = $this->deactivateMissingUnits(
-                $units,
-                $company_id
-            );
-
+            $result['deactivated'] = $this->deactivateMissingUnits($units, $company_id);
             $result['success'] = true;
-
             Log::channel('busy')->info('Unit Pull Completed', [
                 'company_id' => $company_id,
                 'fetched' => $result['fetched'],
@@ -62,80 +56,48 @@ class BusyToDsaUnit
                 'skipped' => $result['skipped'],
                 'deactivated' => $result['deactivated'],
             ]);
-
             return $result;
         } catch (Throwable $e) {
-
             $result['error'] = $e->getMessage();
-
             Log::channel('busy')->error('BUSY Unit Sync Failed', [
                 'company_id' => $company_id,
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
             ]);
-
             return $result;
         } finally {
-
-            $result['duration_ms'] = (int) round(
-                (microtime(true) - $startedAt) * 1000
-            );
+            $result['duration_ms'] = (int) round((microtime(true) - $startedAt) * 1000);
         }
     }
 
     private function parseBusyUnits(string $body): array
     {
         $body = trim($body);
-
         if ($body === '') {
             return [];
         }
-
         libxml_use_internal_errors(true);
-
         $xml = simplexml_load_string($body);
-
         if ($xml === false) {
             Log::channel('busy')->error('Failed to parse BUSY unit XML', [
                 'body' => $body,
                 'errors' => libxml_get_errors(),
             ]);
-
             libxml_clear_errors();
-
             return [];
         }
-
         $xml->registerXPathNamespace('z', '#RowsetSchema');
-
         $rows = $xml->xpath('//z:row') ?: [];
-
         $units = [];
-
         foreach ($rows as $row) {
-
             $attributes = $row->attributes();
-
-            $masterCode = trim(
-                (string) ($attributes['Code'] ?? '')
-            );
-
-            $name = trim(
-                (string) ($attributes['Name'] ?? '')
-            );
-
-            $symbol = trim(
-                (string) ($attributes['Symbol'] ?? $name)
-            );
-
-            $status = ($attributes['DeactiveMaster'] ?? '') === 'True'
-                ? 'Inactive'
-                : 'Active';
-
+            $masterCode = trim((string) ($attributes['Code'] ?? ''));
+            $name = trim((string) ($attributes['Name'] ?? ''));
+            $symbol = trim((string) ($attributes['Symbol'] ?? $name));
+            $status = ($attributes['DeactiveMaster'] ?? '') === 'True' ? 'Inactive' : 'Active';
             if ($masterCode === '' || $name === '') {
                 continue;
             }
-
             $units[] = [
                 'master_code' => $masterCode,
                 'name' => $name,
@@ -143,12 +105,10 @@ class BusyToDsaUnit
                 'status' => $status,
             ];
         }
-
         Log::channel('busy')->info('Parsed BUSY Units', [
             'count' => count($units),
             'units' => $units,
         ]);
-
         return $units;
     }
 

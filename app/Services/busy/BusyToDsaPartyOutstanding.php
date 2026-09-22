@@ -58,8 +58,7 @@ class BusyToDsaPartyOutstanding
                     continue;
                 }
                 /*
-                 * Match BUSY customer with DSA party.
-                 *
+                 * Match BUSY customer with DSA party
                  * parties_busy.busyparty_id
                  * contains BUSY MasterCode.
                  */
@@ -81,12 +80,7 @@ class BusyToDsaPartyOutstanding
                     continue;
                 }
                 $result['matched']++;
-                DB::table('parties_busy')
-                    ->where('id', $party->id)
-                    ->update([
-                        'due_amount' => round($amount, 2),
-                        'updated_at' => now(),
-                    ]);
+                DB::table('parties_busy')->where('id', $party->id)->update(['due_amount' => round($amount, 2),'updated_at' => now(),]);
                 $result['updated']++;
                 Log::channel('busy')->info(
                     'BUSY customer outstanding updated',
