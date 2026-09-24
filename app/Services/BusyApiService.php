@@ -126,6 +126,23 @@ class BusyApiService
         ]);
     }
 
+    /**
+     * Modify existing Account Master by BUSY Master Code.
+     *
+     * BUSY:
+     * SC = 6
+     * MasterCode = existing BUSY master code
+     * MasterXML = account XML
+     */
+    public function modifyMaster(int $masterCode, string $xml): array
+    {
+        return $this->request([
+            'SC' => 6,
+            'MasterCode' => $masterCode,
+            'MasterXML' => $xml,
+        ]);
+    }
+
     /** Create Voucher (SC=2). */
     public function createVoucher(int $voucherType, string $xml): array
     {
@@ -133,6 +150,21 @@ class BusyApiService
             'SC' => 2,
             'VchType' => $voucherType,
             'VchXML' => $xml,
+        ]);
+    }
+
+    /**
+     * Modify Voucher from XML by Voucher Code.
+     *
+     * BUSY:
+     * SC = 4
+     */
+    public function modifyVoucherByCode(int $voucherType, string|int $voucherCode, string $xml): array {
+        return $this->request([
+            'SC' => 4,
+            'VchType' => $voucherType,
+            'VchXML' => $xml,
+            'VchCode' => $voucherCode,
         ]);
     }
 
@@ -588,7 +620,7 @@ class BusyApiService
      *     ],
      * ]
      */
-  
+
     public function getCustomerOutstanding(): array
     {
         $query = "SELECT M.Code AS MasterCode, M.Name AS Name, SUM(T.Value1) AS OutstandingAmount FROM MASTER1 M LEFT JOIN TRAN2 T ON T.MasterCode1 = M.Code WHERE M.MASTERTYPE = 2 AND M.PARENTGRP = 116 GROUP BY M.Code, M.Name";

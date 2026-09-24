@@ -26,7 +26,11 @@
 
                 <a href="{{ url('/customers') }}"
                     class="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-primary hover:text-white transition duration-300">
-                    Clients
+                   ERP Clients
+                </a>
+                <a href="{{ url('/busy/parties') }}"
+                    class="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-primary hover:text-white transition duration-300">
+                    Busy Party 
                 </a>
 
                 <a href="{{ url('/products') }}"
@@ -39,7 +43,7 @@
                     Orders
                 </a>
 
-                <a href="{{ url('/payments') }}"
+                <a href="{{ url('/collections') }}"
                     class="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-primary hover:text-white transition duration-300">
                     Collections
                 </a>
