@@ -7,7 +7,7 @@ use App\Models\CollectionImage;
 use App\Models\CollectionType;
 use App\Models\Bank;
 use App\Models\PartyBusy;
-use App\Services\DsaToBusyCollection;
+use App\Services\busy\DsaToBusyCollection;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -27,10 +27,7 @@ class CollectionController extends Controller
 
         $query = Collection::query()
             ->with([
-                'client',
-                'collectionType',
-                'bank',
-                'images',
+                'client'
             ])
             ->where(
                 'company_id',
@@ -202,7 +199,8 @@ class CollectionController extends Controller
      * Store collection.
      */
     public function store(
-        Request $request
+        Request $request,
+        DsaToBusyCollection $busyCollection
     ): RedirectResponse {
 
         $companyId = 1;
@@ -344,10 +342,10 @@ class CollectionController extends Controller
             /*
              * Sync after local transaction succeeds.
              */
-            // $sync =
-            //     $busyCollection->sync(
-            //         $collection->fresh()
-            //     );
+            $sync =
+                $busyCollection->sync(
+                    $collection->fresh()
+                );
 
             if ($sync['success']) {
 

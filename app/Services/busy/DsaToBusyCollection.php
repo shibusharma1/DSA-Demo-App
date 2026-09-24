@@ -1,8 +1,10 @@
 <?php
-namespace App\Services;
+
+namespace App\Services\busy;
 
 use App\Constants\BusyVoucherType;
 use App\Models\Collection;
+use App\Services\BusyApiService;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use SimpleXMLElement;
@@ -12,8 +14,7 @@ class DsaToBusyCollection
 {
     public function __construct(
         protected BusyApiService $busyApiService
-    ) {
-    }
+    ) {}
 
     /**
      * Create or update a collection in BUSY.
@@ -100,9 +101,9 @@ class DsaToBusyCollection
                         'success' => false,
                         'collection_id' => $collection->id,
                         'busycollection_id' =>
-                            $collection->busycollection_id,
+                        $collection->busycollection_id,
                         'message' =>
-                            $response['description']
+                        $response['description']
                             ?? 'BUSY receipt modification failed.',
                     ];
                 }
@@ -116,9 +117,9 @@ class DsaToBusyCollection
                     'success' => true,
                     'collection_id' => $collection->id,
                     'busycollection_id' =>
-                        $collection->busycollection_id,
+                    $collection->busycollection_id,
                     'message' =>
-                        'BUSY receipt updated successfully.',
+                    'BUSY receipt updated successfully.',
                 ];
             }
 
@@ -142,7 +143,7 @@ class DsaToBusyCollection
                     'success' => false,
                     'collection_id' => $collection->id,
                     'message' =>
-                        $response['description']
+                    $response['description']
                         ?? 'BUSY receipt creation failed.',
                 ];
             }
@@ -155,6 +156,15 @@ class DsaToBusyCollection
                 ?? $response['vch_code']
                 ?? $response['VchCode']
                 ?? null;
+
+            if ($voucherCode === null && !empty($response['body'])) {
+                $body = trim((string) $response['body']);
+
+                if (ctype_digit($body)) {
+                    $voucherCode = $body;
+                }
+                
+            }
 
             /*
              * If BUSY does not return VchCode in the response,
@@ -170,9 +180,8 @@ class DsaToBusyCollection
                 'collection_id' => $collection->id,
                 'busycollection_id' => $voucherCode,
                 'message' =>
-                    'BUSY receipt created successfully.',
+                'BUSY receipt created successfully.',
             ];
-
         } catch (Throwable $e) {
 
             Log::channel('busy')->error(
@@ -436,7 +445,8 @@ class DsaToBusyCollection
             'Debit'
         );
 
-        return $xml->asXML();
+        // return $xml->asXML();
+        return $this->normalizeBusyXml($xml->asXML());
     }
 
     /**
@@ -522,6 +532,41 @@ class DsaToBusyCollection
     }
 
     /**
+     * BUSY receives VchXML through an HTTP header.
+     *
+     * Guzzle does not allow XML declaration/newline characters
+     * inside a header value, so keep the XML as one single-line
+     * header-safe string.
+     */
+    protected function normalizeBusyXml(string $xml): string
+    {
+        // Remove XML declaration:
+        $xml = preg_replace(
+            '/<\?xml[^>]*\?>/i',
+            '',
+            $xml
+        );
+
+        // Remove line breaks, tabs and carriage returns.
+        $xml = str_replace(
+            ["\r", "\n", "\t"],
+            '',
+            $xml
+        );
+
+        // Remove unnecessary whitespace between XML tags.
+        $xml = preg_replace(
+            '/>\s+</',
+            '><',
+            $xml
+        );
+
+        return trim($xml);
+    }
+
+
+
+    /**
      * Mark collection as successfully synced.
      */
     protected function markSynced(
@@ -532,7 +577,7 @@ class DsaToBusyCollection
         $data = [
             'busy_sync_status' => 'synced',
             'busy_sync_message' =>
-                'Receipt synchronized with BUSY successfully.',
+            'Receipt synchronized with BUSY successfully.',
             'busy_synced_at' => now(),
         ];
 

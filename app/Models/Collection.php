@@ -127,13 +127,13 @@ class Collection extends Model
     /**
      * Bank.
      */
-    public function bank(): BelongsTo
-    {
-        return $this->belongsTo(
-            Bank::class,
-            'bank_id'
-        );
-    }
+    // public function bank(): BelongsTo
+    // {
+    //     return $this->belongsTo(
+    //         Bank::class,
+    //         'bank_id'
+    //     );
+    // }
 
     /**
      * Collection Type.
