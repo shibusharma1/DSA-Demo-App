@@ -66,7 +66,7 @@ return new class extends Migration
             $table->string('tmp_parent_group_code')->nullable();
 
             $table->string('supplier_type')->nullable();
-            $table->integer('credit_days_sale')->nullable();
+            $table->integer('credit_days')->nullable();
             $table->integer('credit_days_purchase')->nullable();
 
             $table->string('price_level')->nullable();

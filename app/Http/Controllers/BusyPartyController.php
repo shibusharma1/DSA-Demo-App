@@ -395,7 +395,7 @@ class BusyPartyController extends Controller
                 'max:100',
             ],
 
-            'credit_days_sale' => [
+            'credit_days' => [
                 'nullable',
                 'integer',
                 'min:0',

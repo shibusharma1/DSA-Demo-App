@@ -27,11 +27,13 @@ class DsaToBusyOrder
             'error' => null,
         ];
         try {
+
             /* Load complete order */
             $order = Order::with(['client', 'details.product', 'details.unit', 'details.tax'])->find($orderId);
             if (!$order) {
                 throw new \RuntimeException('Order not found.');
             }
+
             /*Basic validation */
             if (!$order->client) {
                 throw new \RuntimeException('Order customer is not available.');
@@ -44,6 +46,7 @@ class DsaToBusyOrder
             if ($order->details->isEmpty()) {
                 throw new \RuntimeException('Order does not contain any products.');
             }
+
             /*Validate every detail */
             foreach ($order->details as $detail) {
                 if (!$detail->product) {
@@ -62,8 +65,10 @@ class DsaToBusyOrder
                     throw new \RuntimeException("Tax is not mapped to BUSY for product {$detail->product->product_name}.");
                 }
             }
+
             /*Generate XML */
             $xml = $this->buildSaleXml($order);
+
             Log::channel('busy')->info(
                 'BUSY Sale XML Generated',
                 [
@@ -72,6 +77,7 @@ class DsaToBusyOrder
                     'xml' => $xml,
                 ]
             );
+
             /*Send to BUSY */
             if ($order->busyorder_id) {
                 // Existing BUSY voucher → MODIFY
@@ -80,9 +86,11 @@ class DsaToBusyOrder
                 // New order → CREATE
                 $response = $this->busyApiService->createSaleVoucher($xml);
             }
+
             if (!($response['success'] ?? false)) {
                 throw new \RuntimeException($response['description'] ?? 'BUSY Sale Voucher creation failed.');
             }
+
             /*Extract BUSY voucher identifier */
             $busyOrderId = $this->extractBusyVoucherId($response['body'] ?? '');
 
@@ -119,7 +127,9 @@ class DsaToBusyOrder
                 'busy_sync_status' => 'Failed',
                 'busy_sync_message' => $e->getMessage(),
             ]);
+
             $result['error'] = $e->getMessage();
+
             Log::channel('busy')->error(
                 'BUSY Sale Sync Failed',
                 [
@@ -131,6 +141,7 @@ class DsaToBusyOrder
             return $result;
         }
     }
+
     /** Build BUSY Sale XML. */
     private function buildSaleXml(Order $order): string
     {
@@ -248,437 +259,125 @@ class DsaToBusyOrder
             /*Price */
             $this->appendText($xml, $item, 'Price', $this->formatNumber($detail->rate));
             $this->appendText($xml, $item, 'PriceAltUnit', $this->formatNumber($detail->rate));
+
             /*Amount */
-            $this->appendText(
-                $xml,
-                $item,
-                'Amt',
-                $this->formatNumber(
-                    (float) $detail->quantity * (float) $detail->rate
-                )
-            );
+            $this->appendText($xml, $item, 'Amt', $this->formatNumber((float) $detail->quantity * (float) $detail->rate));
+            $this->appendText($xml, $item, 'NettAmount', $this->formatNumber($detail->taxable_amount));
 
-            $this->appendText(
-                $xml,
-                $item,
-                'NettAmount',
-                $this->formatNumber(
-                    $detail->taxable_amount
-                )
-            );
-
-            /*
-            |--------------------------------------------------------------------------
-            | Discount
-            |--------------------------------------------------------------------------
-            */
-
+            /* Discount */
             $discountPercent = 0;
 
             if (
                 $detail->discount_type === 'percent'
             ) {
-                $discountPercent =
-                    (float) $detail->discount;
+                $discountPercent = (float) $detail->discount;
             }
 
-            $this->appendText(
-                $xml,
-                $item,
-                'CompoundDiscount',
-                $this->formatNumber(
-                    $discountPercent
-                )
-            );
+            $this->appendText($xml, $item, 'CompoundDiscount', $this->formatNumber($discountPercent));
 
-            /*
-            |--------------------------------------------------------------------------
-            | Tax
-            |--------------------------------------------------------------------------
-            */
+            /* Tax */
+            $this->appendText($xml, $item, 'STAmount', $this->formatNumber($detail->tax_amount));
+            $this->appendText($xml, $item, 'STPercent', $this->formatNumber($detail->tax_rate));
 
-            $this->appendText(
-                $xml,
-                $item,
-                'STAmount',
-                $this->formatNumber(
-                    $detail->tax_amount
-                )
-            );
-
-            $this->appendText(
-                $xml,
-                $item,
-                'STPercent',
-                $this->formatNumber(
-                    $detail->tax_rate
-                )
-            );
-
-            /*
-            |--------------------------------------------------------------------------
-            | Description
-            |--------------------------------------------------------------------------
-            */
-
+            /* Description */
             if ($detail->description) {
-
-                $this->appendText(
-                    $xml,
-                    $item,
-                    'ItemDescInfo',
-                    $detail->description
-                );
+                $this->appendText($xml, $item, 'ItemDescInfo', $detail->description);
             }
 
-            /*
-            |--------------------------------------------------------------------------
-            | Empty BUSY structures
-            |--------------------------------------------------------------------------
-            */
-
-            $item->appendChild(
-                $xml->createElement(
-                    'ItemSerialNoEntries'
-                )
-            );
-
-            $item->appendChild(
-                $xml->createElement(
-                    'ParamStockEntries'
-                )
-            );
-
-            $item->appendChild(
-                $xml->createElement(
-                    'BatchEntries'
-                )
-            );
-
-            $itemEntries->appendChild(
-                $item
-            );
+            /* Empty BUSY structures */
+            $item->appendChild($xml->createElement('ItemSerialNoEntries'));
+            $item->appendChild($xml->createElement('ParamStockEntries'));
+            $item->appendChild($xml->createElement('BatchEntries'));
+            $itemEntries->appendChild($item);
         }
 
-        $sale->appendChild(
-            $itemEntries
-        );
+        $sale->appendChild($itemEntries);
     }
 
-    /**
-     * Build BillSundries.
-     *
-     * Currently used for order-level discount.
-     */
-    private function buildBillSundries(
-        DOMDocument $xml,
-        \DOMElement $sale,
-        Order $order
-    ): void {
+    /* Build BillSundries. Currently used for order-level discount. */
+    private function buildBillSundries(DOMDocument $xml, \DOMElement $sale, Order $order): void {
 
         if ((float) $order->discount <= 0) {
             return;
         }
 
-        $billSundries = $xml->createElement(
-            'BillSundries'
-        );
+        $billSundries = $xml->createElement('BillSundries');
+        $detail = $xml->createElement('BSDetail');
 
-        $detail = $xml->createElement(
-            'BSDetail'
-        );
+        $this->appendText($xml, $detail, 'SrNo', '1');
+        $this->appendText($xml, $detail, 'BSName', 'Discount');
+        $this->appendText($xml, $detail, 'Amt', $this->formatNumber($order->discount));
+        $this->appendText($xml, $detail, 'Date', Carbon::parse($order->order_date)->format('d-m-Y'));
+        $this->appendText($xml, $detail, 'VchNo', $order->order_no);
+        $this->appendText($xml, $detail, 'VchType', '9');
 
-        $this->appendText(
-            $xml,
-            $detail,
-            'SrNo',
-            '1'
-        );
-
-        $this->appendText(
-            $xml,
-            $detail,
-            'BSName',
-            'Discount'
-        );
-
-        $this->appendText(
-            $xml,
-            $detail,
-            'Amt',
-            $this->formatNumber(
-                $order->discount
-            )
-        );
-
-        $this->appendText(
-            $xml,
-            $detail,
-            'Date',
-            Carbon::parse(
-                $order->order_date
-            )->format('d-m-Y')
-        );
-
-        $this->appendText(
-            $xml,
-            $detail,
-            'VchNo',
-            $order->order_no
-        );
-
-
-
-        $this->appendText(
-            $xml,
-            $detail,
-            'VchType',
-            '9'
-        );
-
-        $billSundries->appendChild(
-            $detail
-        );
-
-        $sale->appendChild(
-            $billSundries
-        );
+        $billSundries->appendChild($detail);
+        $sale->appendChild($billSundries);
     }
 
-    /**
-     * Build PendingBillDetails.
-     */
-    private function buildPendingBillDetails(
-        DOMDocument $xml,
-        \DOMElement $sale,
-        Order $order
-    ): void {
+    /* Build PendingBillDetails. */
+    private function buildPendingBillDetails(DOMDocument $xml, \DOMElement $sale, Order $order): void {
 
-        $pending = $xml->createElement(
-            'PendingBillDetails'
-        );
+        $pending = $xml->createElement('PendingBillDetails');
+        $billDetail = $xml->createElement('BillDetail');
 
-        $billDetail = $xml->createElement(
-            'BillDetail'
-        );
+        $this->appendText($xml, $billDetail, 'MasterName1', $this->getClientBusyName($order));
+        $refs = $xml->createElement('BillRefs');
 
-        $this->appendText(
-            $xml,
-            $billDetail,
-            'MasterName1',
-            $this->getClientBusyName($order)
-        );
+        /* Method 1 = New Reference */
+        $this->appendText($xml, $refs, 'Method', '1');
+        $this->appendText($xml, $refs, 'SrNo', '1');
+        $this->appendText($xml, $refs, 'RefNo', $order->order_no);
+        $this->appendText($xml, $refs, 'Date', Carbon::parse($order->order_date)->format('d-m-Y'));
+        $this->appendText($xml, $refs, 'DueDate', Carbon::parse($order->order_date)->format('d-m-Y'));
 
-        $refs = $xml->createElement(
-            'BillRefs'
-        );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Method 1 = New Reference
-        |--------------------------------------------------------------------------
-        */
-
-        $this->appendText(
-            $xml,
-            $refs,
-            'Method',
-            '1'
-        );
-
-        $this->appendText(
-            $xml,
-            $refs,
-            'SrNo',
-            '1'
-        );
-
-        $this->appendText(
-            $xml,
-            $refs,
-            'RefNo',
-            $order->order_no
-        );
-
-        $this->appendText(
-            $xml,
-            $refs,
-            'Date',
-            Carbon::parse(
-                $order->order_date
-            )->format('d-m-Y')
-        );
-
-        $this->appendText(
-            $xml,
-            $refs,
-            'DueDate',
-            Carbon::parse(
-                $order->order_date
-            )->format('d-m-Y')
-        );
-
-        /*
-        |--------------------------------------------------------------------------
-        | Positive value for receivable
-        |--------------------------------------------------------------------------
-        */
-
-        $this->appendText(
-            $xml,
-            $refs,
-            'Value1',
-            $this->formatNumber(
-                $order->grand_total
-            )
-        );
-
-        $this->appendText(
-            $xml,
-            $refs,
-            'VchType',
-            '9'
-        );
-
-        $billDetail->appendChild(
-            $refs
-        );
-
-        $pending->appendChild(
-            $billDetail
-        );
-
-        $sale->appendChild(
-            $pending
-        );
+        /* Positive value for receivable */
+        $this->appendText($xml, $refs, 'Value1', $this->formatNumber($order->grand_total));
+        $this->appendText($xml, $refs, 'VchType', '9');
+        $billDetail->appendChild($refs);
+        $pending->appendChild($billDetail);
+        $sale->appendChild($pending);
     }
 
-    /**
-     * Get BUSY customer name.
-     *
-     * The BUSY XML requires MasterName1.
-     *
-     * We use the DSA client's stored BUSY mapping/name.
-     */
-    private function getClientBusyName(
-        Order $order
-    ): string {
-
+    /*Get BUSY customer name. The BUSY XML requires MasterName1. We use the DSA client's stored BUSY mapping/name. */
+    private function getClientBusyName(Order $order): string {
         $client = $order->client;
 
-        /*
-        |--------------------------------------------------------------------------
-        | If your clients table has a dedicated BUSY name column,
-        | use it here.
-        |--------------------------------------------------------------------------
-        */
-
-        return trim(
-            (string) (
-                $client->company_name
-                ?: $client->name
-                ?: $client->busyparty_id
-            )
-        );
+        /*If your clients table has a dedicated BUSY name column, use it here. */
+        return trim((string) ($client->company_name ?: $client->name ?: $client->busyparty_id));
     }
 
-    /**
-     * Get BUSY product name.
-     */
-    private function getProductBusyName(
-        object $product
-    ): string {
-
-        return trim(
-            (string) (
-                $product->product_name
-                ?: $product->busyproduct_id
-            )
-        );
+    /* Get BUSY product name. */
+    private function getProductBusyName(object $product): string {
+        return trim((string) ($product->product_name ?: $product->busyproduct_id));
     }
 
-    /**
-     * Get BUSY unit name.
-     */
-    private function getUnitBusyName(
-        object $unit
-    ): string {
-
-        return trim(
-            (string) (
-                $unit->name
-                ?: $unit->symbol
-                ?: $unit->busyunit_id
-            )
-        );
+    /* Get BUSY unit name. */
+    private function getUnitBusyName(object $unit): string {
+        return trim((string) ($unit->name ?: $unit->symbol ?: $unit->busyunit_id));
     }
 
-    /**
-     * Get BUSY tax name.
-     */
-    private function getTaxBusyName(
-        object $tax
-    ): string {
-
-        return trim(
-            (string) (
-                $tax->name
-                ?: $tax->display_name
-                ?: $tax->busytax_id
-            )
-        );
+    /* Get BUSY tax name. */
+    private function getTaxBusyName(object $tax): string {
+        return trim((string) ($tax->name ?: $tax->display_name ?: $tax->busytax_id));
     }
 
-    /**
-     * Add XML element.
-     */
-    private function appendText(
-        DOMDocument $xml,
-        \DOMElement $parent,
-        string $name,
-        string $value
-    ): void {
+    /* Add XML element. */
+    private function appendText(DOMDocument $xml, \DOMElement $parent, string $name, string $value): void {
 
-        $element = $xml->createElement(
-            $name
-        );
-
-        $element->appendChild(
-            $xml->createTextNode($value)
-        );
-
-        $parent->appendChild(
-            $element
-        );
+        $element = $xml->createElement($name);
+        $element->appendChild($xml->createTextNode($value));
+        $parent->appendChild($element);
     }
 
-    /**
-     * Format numeric values for BUSY.
-     */
-    private function formatNumber(
-        $value
-    ): string {
-
-        return number_format(
-            (float) $value,
-            2,
-            '.',
-            ''
-        );
+    /* Format numeric values for BUSY. */
+    private function formatNumber($value): string {
+        return number_format((float) $value, 2, '.', '');
     }
 
-    /**
-     * Try to extract BUSY voucher ID from response.
-     *
-     * BUSY response structure can vary by installation/version,
-     * so this deliberately checks common formats.
-     */
-    private function extractBusyVoucherId(
-        string $body
-    ): ?string {
-
+    /* Try to extract BUSY voucher ID from response. BUSY response structure can vary by installation/version, so this deliberately checks common formats. */
+    private function extractBusyVoucherId(string $body): ?string {
         $body = trim($body);
-
         if ($body === '') {
             return null;
         }
@@ -687,20 +386,10 @@ class DsaToBusyOrder
         if (ctype_digit($body)) {
             return $body;
         }
-        /*
-        |--------------------------------------------------------------------------
-        | XML response
-        |--------------------------------------------------------------------------
-        */
-
+        /* XML response */
         libxml_use_internal_errors(true);
-
-        $xml = simplexml_load_string(
-            $body
-        );
-
+        $xml = simplexml_load_string($body);
         if ($xml !== false) {
-
             $possibleFields = [
                 'VchCode',
                 'VoucherCode',
@@ -708,15 +397,9 @@ class DsaToBusyOrder
                 'VoucherId',
                 'Id',
             ];
-
             foreach ($possibleFields as $field) {
-
                 if (isset($xml->{$field})) {
-
-                    $value = trim(
-                        (string) $xml->{$field}
-                    );
-
+                    $value = trim((string) $xml->{$field});
                     if ($value !== '') {
                         return $value;
                     }
@@ -724,44 +407,17 @@ class DsaToBusyOrder
             }
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | JSON response
-        |--------------------------------------------------------------------------
-        */
-
-        $json = json_decode(
-            $body,
-            true
-        );
-
+        /* JSON response */
+        $json = json_decode($body, true);
         if (is_array($json)) {
-
-            foreach (
-                [
-                    'VchCode',
-                    'VoucherCode',
-                    'VchId',
-                    'VoucherId',
-                    'id',
-                ] as $key
-            ) {
-
-                if (
-                    isset($json[$key]) &&
-                    $json[$key] !== ''
-                ) {
+            foreach (['VchCode', 'VoucherCode', 'VchId', 'VoucherId', 'id'] as $key) {
+                if (isset($json[$key]) && $json[$key] !== '') {
                     return (string) $json[$key];
                 }
             }
         }
 
-        /*
-        |--------------------------------------------------------------------------
-        | Do not invent an ID.
-        |--------------------------------------------------------------------------
-        */
-
+        /* Do not invent an ID. */
         return null;
     }
 }

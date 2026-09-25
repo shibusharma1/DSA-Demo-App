@@ -1,5 +1,4 @@
 <?php
-
 namespace App\Services\busy;
 
 use App\Services\BusyApiService;
@@ -18,7 +17,6 @@ class BusyToDsaTaxes
     public function fetchTaxes(int $company_id): array
     {
         $startedAt = microtime(true);
-
         $result = [
             'success' => false,
             'company_id' => $company_id,
@@ -32,18 +30,32 @@ class BusyToDsaTaxes
         ];
 
         try {
+            /* Get complete taxes from BUSY.*/
             $response = $this->busyApiService->getTaxes();
+
+            Log::channel('busy')->info('BUSY Tax Data', [
+                'company_id' => $company_id,
+                'response' => $response,
+            ]);
+
             if (!($response['success'] ?? false)) {
                 throw new \RuntimeException($response['description'] ?? 'BUSY tax fetch failed.');
             }
-            $taxes = $this->parseBusyTaxes($response['body'] ?? '');
+
+            /* getTaxes() now returns complete tax data. */
+            $taxes = $response['taxes'] ?? [];
             $result['fetched'] = count($taxes);
+
+            /* Create or update DSA taxes.*/
             $sync = $this->createOrUpdateDsaTaxes($taxes, $company_id);
             $result['inserted'] = $sync['inserted'];
             $result['updated'] = $sync['updated'];
             $result['skipped'] = $sync['skipped'];
+            /* Deactivate DSA taxes that no longer exist in BUSY. */
             $result['deactivated'] = $this->deactivateMissingTaxes($taxes, $company_id);
+
             $result['success'] = true;
+
             Log::channel('busy')->info('Tax Pull Completed', [
                 'company_id' => $company_id,
                 'fetched' => $result['fetched'],
@@ -52,6 +64,7 @@ class BusyToDsaTaxes
                 'skipped' => $result['skipped'],
                 'deactivated' => $result['deactivated'],
             ]);
+
             return $result;
         } catch (Throwable $e) {
             $result['error'] = $e->getMessage();
@@ -66,63 +79,11 @@ class BusyToDsaTaxes
         }
     }
 
-    private function parseBusyTaxes(string $body): array
-    {
-        $body = trim($body);
-
-        if ($body === '') {
-            return [];
-        }
-        libxml_use_internal_errors(true);
-        $xml = simplexml_load_string($body);
-        if ($xml === false) {
-            Log::channel('busy')->error(
-                'Failed to parse BUSY tax XML',
-                [
-                    'errors' => libxml_get_errors(),
-                ]
-            );
-            libxml_clear_errors();
-            return [];
-        }
-
-        $xml->registerXPathNamespace('z','#RowsetSchema');
-        $rows = $xml->xpath('//z:row') ?: [];
-        $taxes = [];
-        foreach ($rows as $row) {
-            $attributes = $row->attributes();
-            $masterCode = trim((string) ($attributes['Code'] ?? ''));
-            $name = trim((string) ($attributes['Name'] ?? ''));
-            $masterType = trim((string) ($attributes['MasterType'] ?? ''));
-            $parentGroup = trim((string) ($attributes['ParentGrp'] ?? ''));
-            $deactive = trim((string) ($attributes['DeactiveMaster'] ?? 'False'));
-            if ($masterCode === '' || $name === '') {
-                continue;
-            }
-            // Additional safety.
-            if ($masterType !== '25') {
-                continue;
-            }
-            $taxes[] = [
-                'master_code' => $masterCode,
-                'name' => $name,
-                'percent' => $this->extractTaxPercent($name),
-                'parent_group' => $parentGroup,
-                'status' => $deactive === 'True' ? 'Inactive' : 'Active',
-            ];
-        }
-
-        Log::channel('busy')->info('Parsed BUSY Taxes', [
-            'count' => count($taxes),
-            'taxes' => $taxes,
-        ]);
-        return $taxes;
-    }
-
     private function createOrUpdateDsaTaxes(array $taxes, int $company_id): array {
         $inserted = 0;
         $updated = 0;
         $skipped = 0;
+
         foreach ($taxes as $tax) {
             $busyTaxId = trim((string) ($tax['master_code'] ?? ''));
             $name = trim((string) ($tax['name'] ?? ''));
@@ -131,10 +92,11 @@ class BusyToDsaTaxes
                 continue;
             }
 
+            $percent = $this->extractTaxPercent($name);
             $data = [
                 'name' => $name,
                 'display_name' => $name,
-                'percent' => $tax['percent'] ?? 0,
+                'percent' => $percent,
                 'default_flag' => 0,
                 'updated_at' => now(),
             ];
@@ -148,7 +110,6 @@ class BusyToDsaTaxes
                 DB::table($this->taxTable)
                     ->where('id', $existing->id)
                     ->update($data);
-
                 $updated++;
             } else {
                 DB::table($this->taxTable)->insert([
@@ -157,7 +118,6 @@ class BusyToDsaTaxes
                     ...$data,
                     'created_at' => now(),
                 ]);
-
                 $inserted++;
             }
         }
@@ -173,19 +133,15 @@ class BusyToDsaTaxes
         $busyTaxIds = collect($taxes)
             ->pluck('master_code')
             ->filter()
-            ->map(fn($id) => trim((string) $id))
+            ->map(fn ($id) => trim((string) $id))
             ->unique()
             ->values()
             ->toArray();
+
         if (empty($busyTaxIds)) {
             return 0;
         }
-        /*
-         * tax_types may not have a status column.
-         * If your table has status, enable the update below.
-         */
-        return 0;
-        /*
+    
         return DB::table($this->taxTable)
             ->where('company_id', $company_id)
             ->whereNotNull('busytax_id')
@@ -194,14 +150,17 @@ class BusyToDsaTaxes
                 'status' => 'Inactive',
                 'updated_at' => now(),
             ]);
-        */
     }
 
     private function extractTaxPercent(string $name): float
     {
+        $name = trim($name);
+        if ($name === '') {
+            return 0.0;
+        }
         if (preg_match('/(\d+(?:\.\d+)?)\s*%/', $name, $matches)) {
             return (float) $matches[1];
         }
-        return 0;
+        return 0.0;
     }
 }

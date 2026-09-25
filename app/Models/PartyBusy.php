@@ -61,7 +61,7 @@ class PartyBusy extends Model
         'tmp_parent_group_code',
 
         'supplier_type',
-        'credit_days_sale',
+        'credit_days',
         'credit_days_purchase',
 
         'price_level',
@@ -90,7 +90,7 @@ class PartyBusy extends Model
 
         'bill_by_bill_balancing' => 'boolean',
 
-        'credit_days_sale' => 'integer',
+        'credit_days' => 'integer',
         'credit_days_purchase' => 'integer',
 
         'opening_balance' => 'decimal:4',

@@ -159,8 +159,7 @@ class BusyApiService
      * BUSY:
      * SC = 4
      */
-    public function modifyVoucherByCode(int $voucherType, string|int $voucherCode, string $xml): array
-    {
+    public function modifyVoucherByCode(int $voucherType, string|int $voucherCode, string $xml): array {
         return $this->request([
             'SC' => 4,
             'VchType' => $voucherType,
@@ -353,132 +352,10 @@ class BusyApiService
         ];
     }
 
-    /**
-     * Fetch BUSY tax masters.
-     *
-     * BUSY:
-     * MASTERTYPE = 25
-     * PARENTGRP = 0
-     */
     public function getTaxes(): array
     {
         $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 25 AND PARENTGRP = 0";
-        $response = $this->executeQuery($query);
-        if (!($response['success'] ?? false)) {
-            return $response;
-        }
-        $body = trim((string) ($response['body'] ?? ''));
-        if ($body === '') {
-            return [
-                ...$response,
-                'taxes' => [],
-            ];
-        }
-
-        libxml_use_internal_errors(true);
-        $xml = simplexml_load_string($body);
-
-        if ($xml === false) {
-            Log::channel('busy')->error('Failed to parse BUSY tax list', [
-                'body' => $body,
-                'errors' => libxml_get_errors(),
-            ]);
-
-            libxml_clear_errors();
-            return [
-                ...$response,
-                'taxes' => [],
-            ];
-        }
-
-        $xml->registerXPathNamespace('z', '#RowsetSchema');
-        $rows = $xml->xpath('//z:row') ?: [];
-        $completeTaxes = [];
-        foreach ($rows as $row) {
-            $attributes = $row->attributes();
-            $masterCode = trim((string) ($attributes['Code'] ?? ''));
-            $name = trim((string) ($attributes['Name'] ?? ''));
-            if ($masterCode === '' || $name === '') {
-                continue;
-            }
-            $masterResponse = $this->getMaster((int) $masterCode);
-            Log::info("Complete master record",[$masterResponse]);
-
-            if (!($masterResponse['success'] ?? false)) {
-                Log::channel('busy')->warning('Failed to fetch complete BUSY tax', [
-                    'master_code' => $masterCode,
-                    'name' => $name,
-                    'description' => $masterResponse['description'] ?? null,
-                ]);
-
-                /* Keep the basic MASTER1 information even when complete XML is unavailable.*/
-                $completeTaxes[] = [
-                    'master_code' => $masterCode,
-                    'name' => $name,
-                    'master_type' => trim((string) ($attributes['MasterType'] ?? '')),
-                    'parent_group' => trim((string) ($attributes['ParentGrp'] ?? '')),
-                    'status' => (($attributes['DeactiveMaster'] ?? '') === 'True')
-                        ? 'Inactive'
-                        : 'Active',
-                ];
-                continue;
-            }
-
-            $masterXml = trim((string) ($masterResponse['body'] ?? ''));
-
-            if ($masterXml === '') {
-                $completeTaxes[] = [
-                    'master_code' => $masterCode,
-                    'name' => $name,
-                    'master_type' => trim((string) ($attributes['MasterType'] ?? '')),
-                    'parent_group' => trim((string) ($attributes['ParentGrp'] ?? '')),
-                    'status' => (($attributes['DeactiveMaster'] ?? '') === 'True') ? 'Inactive' : 'Active',
-                ];
-
-                continue;
-            }
-
-            libxml_use_internal_errors(true);
-            $tax = simplexml_load_string($masterXml);
-            if ($tax === false) {
-                Log::channel('busy')->warning('Failed to parse BUSY Master XML for tax', [
-                    'master_code' => $masterCode,
-                    'name' => $name,
-                    'body' => $masterXml,
-                    'errors' => libxml_get_errors(),
-                ]);
-                libxml_clear_errors();
-                $completeTaxes[] = [
-                    'master_code' => $masterCode,
-                    'name' => $name,
-                    'master_type' => trim((string) ($attributes['MasterType'] ?? '')),
-                    'parent_group' => trim((string) ($attributes['ParentGrp'] ?? '')),
-                    'status' => (($attributes['DeactiveMaster'] ?? '') === 'True') ? 'Inactive' : 'Active',
-                ];
-                continue;
-            }
-
-            /*Complete BUSY tax information.
-         * Keep the fields generic here because the exact
-         * tax-rate XML field can vary between BUSY versions.
-         * Percentage is resolved from the tax name in DSA.*/
-            $completeTaxes[] = [
-                'master_code' => $masterCode,
-                'name' => trim((string) ($tax->Name ?? $name)) ?: $name,
-                'master_type' => trim((string) ($tax->MasterType ?? $attributes['MasterType'] ?? '')) ?: null,
-                'parent_group' => trim((string) ($tax->ParentGroup ?? $attributes['ParentGrp'] ?? '')) ?: null,
-                'tax_type' => trim((string) ($tax->TaxType ?? '')) ?: null,
-                'status' => (($attributes['DeactiveMaster'] ?? '') === 'True') ? 'Inactive' : 'Active',
-            ];
-        }
-        Log::channel('busy')->info('Complete BUSY Taxes', [
-            'count' => count($completeTaxes),
-            'taxes' => $completeTaxes,
-        ]);
-        return [
-            ...$response,
-            'taxes' => $completeTaxes,
-        ];
+        return $this->executeQuery($query);
     }
 
     public function getUnits(): array

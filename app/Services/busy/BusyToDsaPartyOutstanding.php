@@ -28,23 +28,14 @@ class BusyToDsaPartyOutstanding
         try {
             $response = $this->busyApiService->getCustomerOutstanding();
             if (!($response['success'] ?? false)) {
-                throw new \RuntimeException(
-                    $response['description']
-                        ?? 'BUSY customer outstanding fetch failed.'
-                );
+                throw new \RuntimeException($response['description'] ?? 'BUSY customer outstanding fetch failed.');
             }
             $outstandings = $response['outstandings'] ?? [];
             $result['fetched'] = count($outstandings);
             foreach ($outstandings as $outstanding) {
-                $masterCode = trim(
-                    (string) ($outstanding['master_code'] ?? '')
-                );
-                $name = trim(
-                    (string) ($outstanding['name'] ?? '')
-                );
-                $amount = (float) (
-                    $outstanding['due_amount'] ?? 0
-                );
+                $masterCode = trim((string) ($outstanding['master_code'] ?? ''));
+                $name = trim((string) ($outstanding['name'] ?? ''));
+                $amount = (float) ($outstanding['due_amount'] ?? 0);
                 if ($masterCode === '') {
                     $result['skipped']++;
                     Log::channel('busy')->warning(
@@ -62,10 +53,7 @@ class BusyToDsaPartyOutstanding
                  * parties_busy.busyparty_id
                  * contains BUSY MasterCode.
                  */
-                $party = DB::table('parties_busy')
-                    ->where('company_id', $companyId)
-                    ->where('busyparty_id', $masterCode)
-                    ->first();
+                $party = DB::table('parties_busy')->where('company_id', $companyId)->where('busyparty_id', $masterCode)->first();
                 if (!$party) {
                     $result['skipped']++;
                     Log::channel('busy')->warning(
@@ -94,10 +82,7 @@ class BusyToDsaPartyOutstanding
                 );
             }
             $result['success'] = true;
-            Log::channel('busy')->info(
-                'BUSY customer outstanding sync completed',
-                $result
-            );
+            Log::channel('busy')->info('BUSY customer outstanding sync completed', $result);
             return $result;
         } catch (Throwable $e) {
             $result['error'] = $e->getMessage();
