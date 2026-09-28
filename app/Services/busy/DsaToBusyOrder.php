@@ -267,9 +267,7 @@ class DsaToBusyOrder
             /* Discount */
             $discountPercent = 0;
 
-            if (
-                $detail->discount_type === 'percent'
-            ) {
+            if ($detail->discount_type === 'percent') {
                 $discountPercent = (float) $detail->discount;
             }
 

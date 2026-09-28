@@ -36,7 +36,8 @@ class DsaToBusyCollection
 
             $xml = $this->buildReceiptXml($collection, $client);
 
-            Log::channel('busy')->info('BUSY Collection Receipt XML',
+            Log::channel('busy')->info(
+                'BUSY Collection Receipt XML',
                 [
                     'collection_id' => $collection->id,
                     'busy_party_id' => $busyPartyCode,
@@ -63,7 +64,7 @@ class DsaToBusyCollection
                     'success' => true,
                     'collection_id' => $collection->id,
                     'busycollection_id' =>
-                    $collection->busycollection_id,
+                     $collection->busycollection_id,
                     'message' =>
                     'BUSY receipt updated successfully.',
                 ];
@@ -91,15 +92,48 @@ class DsaToBusyCollection
                 }
             }
 
-            /*If BUSY does not return VchCode in the response, keep the collection synced but don't invent an ID. */
+            if (!$voucherCode) {
+                $this->markFailed($collection, 'BUSY created the receipt but did not return a voucher code.');
+                return [
+                    'success' => false,
+                    'collection_id' => $collection->id,
+                    'message' =>
+                    'BUSY created the receipt but did not return a voucher code.',
+                ];
+            }
+
+            /* Verify that BUSY actually created accounting entries.*/
+            $verification = $this->verifyReceipt($voucherCode);
+
+            if (!($verification['success'] ?? false)) {
+                Log::channel('busy')->error(
+                    'BUSY Receipt Verification Failed',
+                    [
+                        'collection_id' => $collection->id,
+                        'busy_voucher_code' => $voucherCode,
+                        'message' => $verification['message'] ?? null,
+                        'tran1' => $verification['tran1'] ?? null,
+                        'tran2' => $verification['tran2'] ?? null,
+                    ]
+                );
+
+                $this->markFailed($collection, $verification['message'] ?? 'BUSY receipt verification failed.');
+
+                return [
+                    'success' => false,
+                    'collection_id' => $collection->id,
+                    'busycollection_id' => $voucherCode,
+                    'message' => $verification['message'] ?? 'BUSY receipt verification failed.',
+                ];
+            }
+
             $this->markSynced($collection, $voucherCode);
 
             return [
                 'success' => true,
                 'collection_id' => $collection->id,
                 'busycollection_id' => $voucherCode,
-                'message' =>
-                'BUSY receipt created successfully.',
+                'message' => 'BUSY receipt created successfully.',
             ];
         } catch (Throwable $e) {
             Log::channel('busy')->error(
@@ -120,64 +154,164 @@ class DsaToBusyCollection
         }
     }
 
-    /** Build BUSY Receipt XML.*/
     protected function buildReceiptXml(Collection $collection, $client): string {
-        /* Existing client name. Prefer company_name because this is the party/account name. */
-        $partyName = $client->company_name ?? $client->name ?? $client->busyparty_id ?? '';
-        /* Payment account. Cash is the default because the collection UI currently defaults to Cash. */
-        $receivingAccount = $this->resolveReceivingAccount($collection);
-        /* BUSY date format.*/
+        /* 1. Resolve party*/
+        $partyName = trim((string) ($client->company_name ?? $client->name ?? ''));
+
+        if ($partyName === '') {
+            throw new RuntimeException('BUSY party name is missing.');
+        }
+
+        /* 2. Resolve receiving account */
+        $receivingAccount = trim($this->resolveReceivingAccount($collection));
+
+        if ($receivingAccount === '') {
+            throw new RuntimeException('BUSY receiving account is missing.');
+        }
+
+        /* 3. Amount */
+        $amount = round((float) $collection->payment_received, 2);
+
+        if ($amount <= 0) {
+            throw new RuntimeException('Collection amount must be greater than zero.');
+        }
+
+        /* 4. Date */
         $date = $collection->payment_date ? $collection->payment_date->format('d-m-Y') : now()->format('d-m-Y');
-        /* Amount. */
-        $amount = $this->value($collection->payment_received);
-        /* Narration.*/
-        $narration = $collection->payment_note ?? '';
 
-        /* Voucher series. Keep configurable.*/
-        $series = $collection->busy_voucher_series ?: config('services.busy.voucher_series', 'Main');
-        /* Voucher number. Empty means BUSY can generate it according to the configured series.*/
-        $voucherNo = $collection->busy_voucher_no ?? '';
+        /* 5. Narration */
+        $narration = trim((string) ($collection->payment_note ?? ''));
 
+        /* 6. Voucher series  */
+        $series = trim((string) ($collection->busy_voucher_series ?: config('services.busy.voucher_series','Main')));
+
+        /* 7. Voucher number */
+        $voucherNo = trim((string) ($collection->busy_voucher_no ?? ''));
+
+        /* 8. Root Receipt */
         $xml = new SimpleXMLElement('<Receipt/>');
+
         $this->addNode($xml, 'VchSeriesName', $series);
         $this->addNode($xml, 'Date', $date);
-        $this->addNode($xml, 'VchType', 14);
+        $this->addNode($xml, 'VchType', '14');
         $this->addNode($xml, 'StockUpdationDate', $date);
         $this->addNode($xml, 'VchNo', $voucherNo);
         $this->addNode($xml, 'AutoVchNo', '');
-        /* Receipt does not require stock.*/
         $this->addNode($xml, 'STPTName', '');
-        /* Party receiving/giving account. */
+
+        /* 9. Receipt header accounts */
         $this->addNode($xml, 'MasterName1', $partyName);
-        /* Cash / Bank account. */
         $this->addNode($xml, 'MasterName2', $receivingAccount);
         $this->addNode($xml, 'TranCurName', 'Rs.');
         $this->addNode($xml, 'InputType', '1');
-        /* Other information. */
+
+        /* 10. Other information */
         $other = $xml->addChild('VchOtherInfoDetails');
         $other->addChild('OFInfo');
         $this->addNode($other, 'Narration1', $narration);
         $this->addNode($other, 'GrDate', $date);
-        /* Cheque information.These are included only when available.*/
         $this->addNode($other, 'ChequeNo', $collection->cheque_no ?? '');
         $this->addNode($other, 'ChequeDate', $collection->cheque_date ? $collection->cheque_date->format('d-m-Y') : '');
-        /* Receipt amount.*/
-        $entries = $xml->addChild('AccountEntries');
-        $entry = $entries->addChild('AccountDetail');
-        $this->addNode($entry, 'MasterName', $partyName);
-        $this->addNode($entry, 'Amount', $amount);
-        $this->addNode($entry, 'DrCr', 'Credit');
-        /* Cash/Bank side. */
-        $bankEntry = $entries->addChild('AccountDetail');
-        $this->addNode($bankEntry, 'MasterName', $receivingAccount);
-        $this->addNode($bankEntry, 'Amount', $amount);
-        $this->addNode($bankEntry, 'DrCr', 'Debit');
-        // return $xml->asXML();
+
+        /* 11. ACCOUNTING ENTRIES
+         * Receipt:
+         * Cash/Bank      Dr
+         * Customer       Cr
+         * Example:
+         * Cash           Dr 14
+         * Customer       Cr 14
+         */
+        $entries = $xml->addChild('AccEntries');
+
+        /* Debit: Cash / Bank */
+        $debit = $entries->addChild('AccDetail');
+        $this->addNode($debit, 'Date', $date);
+        $this->addNode($debit, 'VchType', '14');
+        $this->addNode($debit, 'SrNo', '1');
+        $this->addNode($debit, 'AccountName', $receivingAccount);
+
+        /* AmountType = 1 :Debit side */
+        $this->addNode($debit, 'AmountType', '1');
+        $this->addNode($debit, 'AmtMainCur', number_format($amount, 2, '.', ''));
+        $this->addNode($debit, 'ShortNar', $narration);
+
+        /* Credit: Customer */
+        $credit = $entries->addChild('AccDetail');
+        $this->addNode($credit, 'Date', $date);
+        $this->addNode($credit, 'VchType', '14');
+        $this->addNode($credit, 'SrNo', '2');
+        $this->addNode($credit, 'AccountName', $partyName);
+
+        /* AmountType = 2 :Credit side */
+        $this->addNode($credit, 'AmountType', '2');
+        $this->addNode($credit, 'AmtMainCur', number_format($amount, 2, '.', ''));
+        $this->addNode($credit, 'CashFlow', number_format($amount, 2, '.', ''));
+        $this->addNode($credit, 'ShortNar', $narration);
+
+        /* 12. Normalize before sending through HTTP headers */
         return $this->normalizeBusyXml($xml->asXML());
     }
 
+    protected function verifyReceipt(string|int $voucherCode): array {
+
+        $voucherCode = (int) $voucherCode;
+
+        if ($voucherCode <= 0) {
+            return [
+                'success' => false,
+                'message' => 'Invalid BUSY voucher code.',
+            ];
+        }
+
+        /* Check voucher header */
+        $tran1 = $this->busyApiService->executeQuery("SELECT * FROM TRAN1 WHERE VchCode = {$voucherCode}");
+
+        if (!($tran1['success'] ?? false)) {
+            return [
+                'success' => false,
+                'message' =>
+                'BUSY TRAN1 verification failed.',
+            ];
+        }
+
+        /*Check accounting entries  */
+        $tran2 = $this->busyApiService->executeQuery("SELECT * FROM TRAN2 WHERE VchCode = {$voucherCode}");
+
+        if (!($tran2['success'] ?? false)) {
+            return [
+                'success' => false,
+                'message' =>
+                'BUSY TRAN2 verification failed.',
+            ];
+        }
+
+        $tran1Body = (string) ($tran1['body'] ?? '');
+
+        $tran2Body = (string) ($tran2['body'] ?? '');
+
+        /* We only consider the voucher valid when TRAN2 actually contains accounting rows. */
+        if (stripos($tran2Body, '<z:row') === false) {
+            return [
+                'success' => false,
+                'message' =>
+                'BUSY receipt was created but no accounting entries were created in TRAN2.',
+                'tran1' => $tran1Body,
+                'tran2' => $tran2Body,
+            ];
+        }
+
+        return [
+            'success' => true,
+            'message' =>
+            'BUSY receipt and accounting entries verified.',
+            'tran1' => $tran1Body,
+            'tran2' => $tran2Body,
+        ];
+    }
+
     /* Resolve Cash / Bank account. */
-    protected function resolveReceivingAccount(Collection $collection): string {
+    protected function resolveReceivingAccount(Collection $collection): string
+    {
         /* If a bank is selected, use the bank's BUSY name. */
         if ($collection->bank_id && $collection->bank) {
             return trim((string) ($collection->bank->busy_name ?? $collection->bank->name ?? ''));
@@ -201,7 +335,8 @@ class DsaToBusyCollection
     }
 
     /* Add XML node safely. */
-    protected function addNode(SimpleXMLElement $parent, string $name, mixed $value): void {
+    protected function addNode(SimpleXMLElement $parent, string $name, mixed $value): void
+    {
         $parent->addChild($name, htmlspecialchars($this->value($value), ENT_XML1 | ENT_COMPAT, 'UTF-8'));
     }
 
@@ -233,7 +368,8 @@ class DsaToBusyCollection
     }
 
     /* Mark collection as successfully synced. */
-    protected function markSynced(Collection $collection, ?string $voucherCode = null): void {
+    protected function markSynced(Collection $collection, ?string $voucherCode = null): void
+    {
         $data = [
             'busy_sync_status' => 'synced',
             'busy_sync_message' =>
@@ -249,7 +385,8 @@ class DsaToBusyCollection
     }
 
     /* Mark collection as failed. */
-    protected function markFailed(Collection $collection, string $message): void {
+    protected function markFailed(Collection $collection, string $message): void
+    {
         $collection->update([
             'busy_sync_status' => 'failed',
             'busy_sync_message' => $message,
