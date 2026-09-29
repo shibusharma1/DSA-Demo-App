@@ -9,6 +9,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use Illuminate\View\View;
 use Throwable;
 
@@ -1095,6 +1096,7 @@ class OrderController extends Controller
      */
     public function syncToBusy(Order $order, DsaToBusyOrder $dsaToBusyOrder): RedirectResponse {
         $result = $dsaToBusyOrder->pushOrder($order->id);
+       
         if ($result['success']) {
             return redirect()->route('orders.show', $order->id)->with('success', $result['message']);
         }
