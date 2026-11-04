@@ -87,7 +87,7 @@ class BusyToDsaItemCategories
             return [];
         }
 
-        $xml->registerXPathNamespace('z','#RowsetSchema');
+        $xml->registerXPathNamespace('z', '#RowsetSchema');
         $rows = $xml->xpath('//z:row') ?: [];
         $categories = [];
         foreach ($rows as $row) {
@@ -118,7 +118,8 @@ class BusyToDsaItemCategories
         return $categories;
     }
 
-    private function createOrUpdateDsaItemCategories(array $categories, int $company_id): array {
+    private function createOrUpdateDsaItemCategories(array $categories, int $company_id): array
+    {
         $inserted = 0;
         $updated = 0;
         $skipped = 0;
@@ -135,6 +136,8 @@ class BusyToDsaItemCategories
 
             $data = [
                 'name' => $name,
+                //Majit dai update
+                'status' => $category['status'] ?? 'Active',
                 'updated_at' => now(),
             ];
 
@@ -166,7 +169,28 @@ class BusyToDsaItemCategories
         ];
     }
 
-    private function deactivateMissingItemCategories(array $categories,int $company_id): int {
-        return 0;
+    //Manjit dai Item categories 
+    private function deactivateMissingItemCategories(array $categories, int $company_id): int
+    {
+        $busyCategoryIds = collect($categories)
+            ->pluck('master_code')
+            ->filter()
+            ->map(fn($id) => trim((string) $id))
+            ->unique()
+            ->values()
+            ->toArray();
+
+        if (empty($busyCategoryIds)) {
+            return 0;
+        }
+
+        return DB::table($this->categoryTable)
+            ->where('company_id', $company_id)
+            ->whereNotNull('busyitemcategory_id')
+            ->whereNotIn('busyitemcategory_id', $busyCategoryIds)
+            ->update([
+                'status' => 'Inactive',
+                'updated_at' => now(),
+            ]);
     }
 }

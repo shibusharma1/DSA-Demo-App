@@ -96,7 +96,7 @@ class BusyToDsaItem
         $updated = 0;
         $skipped = 0;
 
-        Log::info("Unit test", [$items]);
+        // Log::info("Unit test", [$items]);
 
         foreach ($items as $item) {
             $busyProductId = trim((string) ($item['master_code'] ?? ''));
@@ -109,20 +109,24 @@ class BusyToDsaItem
             $unitId = $unitCode !== '' ? $this->ensureUnitId($unitCode, $company_id) : null;
             $categoryName = trim((string) ($item['parent_group'] ?? ''));
             $categoryId = $categoryName !== '' ? $this->ensureCategoryId($categoryName, $company_id) : null;
-            $mrp = $this->parseNumeric($item['sale_price'] ?? null);
+            // Manjit Dai Update for MRP
+            $mrp = $this->parseNumeric($item['mrp'] ?? null);
             $data = [
                 'product_name' => $name,
-                'product_code' => null,
+                //Manjit dai update
+                'product_code' => $item['alias'],
                 'category_id' => $categoryId,
                 'brand' => null,
                 'unit' => $unitId,
                 'mrp' => $mrp,
-                'details' => null,
-                'short_desc' => $item['short_desc'] ?? null,
+                //manjit dai udpate
+                // 'details' => null,
+                'details' => $item['short_desc'] ?? null,
                 'status' => $item['status'] ?? 'Active',
                 'updated_at' => now(),
             ];
 
+            // Log::info("Product data check Shibu",[$data]);
             $existing = DB::table($this->productsTable)
                 ->where('company_id', $company_id)
                 ->where('busyproduct_id', $busyProductId)

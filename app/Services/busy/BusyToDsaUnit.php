@@ -93,7 +93,8 @@ class BusyToDsaUnit
             $attributes = $row->attributes();
             $masterCode = trim((string) ($attributes['Code'] ?? ''));
             $name = trim((string) ($attributes['Name'] ?? ''));
-            $symbol = trim((string) ($attributes['Symbol'] ?? $name));
+            //Manjit Dai update
+            $symbol = trim((string) ($attributes['Alias'] ?? $name));
             $status = ($attributes['DeactiveMaster'] ?? '') === 'True' ? 'Inactive' : 'Active';
             if ($masterCode === '' || $name === '') {
                 continue;

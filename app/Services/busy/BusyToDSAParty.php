@@ -3,10 +3,18 @@
 namespace App\Services\busy;
 
 use App\Services\BusyApiService;
-use Attribute;
+// use Attribute;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use App\Services\QuickBooks\Resolvers\CountryResolver;
+// use App\Services\QuickBooks\Resolvers\CountryResolver;
+//manjit dai update
+// use Illuminate\Support\Str;
+// use App\PermissionCategory;
+// use Illuminate\Http\Request;
+// use Spatie\Permission\Models\Role;
+// use Spatie\Permission\Models\Permission;
+// use App\PartyType;
+
 // use App\Country;
 use Throwable;
 
@@ -93,8 +101,53 @@ class BusyToDSAParty
             //     $country_info = Country::find($countryId);
             //     $phone_code = $country_info->phonecode ?? ''; // Or whatever field you need
             // }
+            Log::info('Party Type checking',[$party['parent_group']]);
+            // Manjit dai update
+            // if (!empty($party['parent_group'])) {
+            //     $partyType = PartyType::firstOrCreate(
+            //         [
+            //             'company_id' => $company_id,
+            //             'name'       => $party['parent_group'],
+            //         ],
+            //         [
+            //             'short_name' => Str::upper(Str::substr($party['parent_group'], 0, 2)),
+            //             'parent_id'  => 0,
+            //         ]
+            //     );
+
+            //     if ($partyType->wasRecentlyCreated) {
+
+            //         $permissionCategory = new PermissionCategory;
+
+            //         $permissionCategory->company_id               = $company_id;
+            //         $permissionCategory->permission_model_id      = $partyType->id;
+            //         $permissionCategory->permission_model         = 'PartyType';
+            //         $permissionCategory->permission_category_type = 'Company';
+            //         $permissionCategory->name                     = str_replace(' ', '_', $partyType->name);
+            //         $permissionCategory->display_name             = 'Party Type: ' . $partyType->name;
+            //         $permissionCategory->indexing_priority        = 10;
+            //         $permissionCategory->save();
+
+            //         $partyTypePermissions = [
+            //             $this->addPermission($partyType, $permissionCategory, 'create', $company_id),
+            //             $this->addPermission($partyType, $permissionCategory, 'view', $company_id),
+            //             $this->addPermission($partyType, $permissionCategory, 'update', $company_id),
+            //             $this->addPermission($partyType, $permissionCategory, 'delete', $company_id),
+            //             $this->addPermission($partyType, $permissionCategory, 'status', $company_id),
+            //         ];
+            //         $role = Role::whereCompanyId($company_id)->whereName('Full Access')->whereGuardName('web')->first();
+            //         if ($role && !empty($partyTypePermissions)) {
+            //             $role->givePermissionTo($partyTypePermissions);
+            //         }
+            //     }
+            // } else {
+            //     $partyType = '';
+            // }
+
             $data = [
                 'company_name' => $name,
+                // Manjit dai Update
+                // 'client_type' => $partyType->id ?? 0,
                 'name' => !empty($party['contact']) ? trim((string) $party['contact']) : null,
                 'phone' => !empty($party['telephone']) ? trim((string) $party['telephone']) : null,
                 'mobile' => !empty($party['mobile']) ? trim((string) $party['mobile']) : null,

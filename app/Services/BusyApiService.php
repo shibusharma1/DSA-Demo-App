@@ -201,7 +201,8 @@ class BusyApiService
      */
     public function getCustomers(): array
     {
-        $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 2 AND PARENTGRP = 116";
+        //Manjit dai Update
+        $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 2 AND PARENTGRP = 116 OR PARENTGRP = 117";
         $response = $this->executeQuery($query);
         if (!($response['success'] ?? false)) {
             return $response;
@@ -590,6 +591,8 @@ class BusyApiService
                 'master_code' => $masterCode,
                 'name' => trim((string) ($item->Name ?? $name)) ?: $name,
                 'alias' => trim((string) ($item->Alias ?? '')) ?: null,
+                //manjit dai update
+                'product_code' => trim((string) ($item->HSNCode ?? '')) ?: null,
                 'print_name' => trim((string) ($item->PrintName ?? '')) ?: null,
                 'parent_group' => trim((string) ($item->ParentGroup ?? '')) ?: null,
                 'unit_name' => trim((string) ($item->CM1 ?? $unitId)) ?: null,
