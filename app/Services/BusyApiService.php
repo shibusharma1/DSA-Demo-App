@@ -592,7 +592,7 @@ class BusyApiService
                 'name' => trim((string) ($item->Name ?? $name)) ?: $name,
                 'alias' => trim((string) ($item->Alias ?? '')) ?: null,
                 //manjit dai update
-                'product_code' => trim((string) ($item->HSNCode ?? '')) ?: null,
+                'product_code' => trim((string) ($item->Alias ?? '')) ?: null,
                 'print_name' => trim((string) ($item->PrintName ?? '')) ?: null,
                 'parent_group' => trim((string) ($item->ParentGroup ?? '')) ?: null,
                 'unit_name' => trim((string) ($item->CM1 ?? $unitId)) ?: null,
