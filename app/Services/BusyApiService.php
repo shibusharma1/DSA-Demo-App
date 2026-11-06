@@ -355,20 +355,30 @@ class BusyApiService
     }
 
     /**
-     * Fetch BUSY tax masters.
+     * Fetch BUSY taxes with complete master details.
      *
-     * BUSY:
-     * MASTERTYPE = 25
-     * PARENTGRP = 0
+     * Flow:
+     * 1. Fetch all tax masters from MASTER1.
+     * 2. Extract MasterCode and Name.
+     * 3. Fetch complete XML for each tax using GetMasterXML (SC=9).
+     * 4. Extract TaxRateCentral from BranchEntries.
+     * 5. Keep basic MASTER1 data if individual master fetching or parsing fails.
+     * 6. Return the original response structure with complete tax data attached.
      */
+    // Dai update
     public function getTaxes(): array
     {
+        // Step 1: Fetch all tax masters.
         $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 25 AND PARENTGRP = 0";
+
         $response = $this->executeQuery($query);
+
         if (!($response['success'] ?? false)) {
             return $response;
         }
+
         $body = trim((string) ($response['body'] ?? ''));
+
         if ($body === '') {
             return [
                 ...$response,
@@ -376,106 +386,164 @@ class BusyApiService
             ];
         }
 
+        // Step 2: Parse MASTER1 response.
         libxml_use_internal_errors(true);
+
         $xml = simplexml_load_string($body);
 
         if ($xml === false) {
             Log::channel('busy')->error('Failed to parse BUSY tax list', [
-                'body' => $body,
                 'errors' => libxml_get_errors(),
             ]);
 
             libxml_clear_errors();
+
             return [
                 ...$response,
+                'success' => false,
+                'description' => 'Unable to parse BUSY tax list XML.',
                 'taxes' => [],
             ];
         }
 
         $xml->registerXPathNamespace('z', '#RowsetSchema');
+
         $rows = $xml->xpath('//z:row') ?: [];
+
         $completeTaxes = [];
+
+        // Step 3: Fetch complete details for every tax master.
         foreach ($rows as $row) {
+
             $attributes = $row->attributes();
+
             $masterCode = trim((string) ($attributes['Code'] ?? ''));
             $name = trim((string) ($attributes['Name'] ?? ''));
+
+            $masterType = trim((string) ($attributes['MasterType'] ?? ''));
+            $parentGroup = trim((string) ($attributes['ParentGrp'] ?? ''));
+
+            $status = (($attributes['DeactiveMaster'] ?? '') === 'True')
+                ? 'Inactive'
+                : 'Active';
+
             if ($masterCode === '' || $name === '') {
                 continue;
             }
+
+            // Step 4: Fetch complete master XML using SC=9.
             $masterResponse = $this->getMaster((int) $masterCode);
-            Log::info("Complete master record",[$masterResponse]);
 
             if (!($masterResponse['success'] ?? false)) {
-                Log::channel('busy')->warning('Failed to fetch complete BUSY tax', [
+
+                Log::channel('busy')->warning('Failed to fetch complete BUSY tax master', [
                     'master_code' => $masterCode,
                     'name' => $name,
                     'description' => $masterResponse['description'] ?? null,
                 ]);
 
-                /* Keep the basic MASTER1 information even when complete XML is unavailable.*/
+                // Keep basic MASTER1 information.
                 $completeTaxes[] = [
                     'master_code' => $masterCode,
                     'name' => $name,
-                    'master_type' => trim((string) ($attributes['MasterType'] ?? '')),
-                    'parent_group' => trim((string) ($attributes['ParentGrp'] ?? '')),
-                    'status' => (($attributes['DeactiveMaster'] ?? '') === 'True')
-                        ? 'Inactive'
-                        : 'Active',
+                    'master_type' => $masterType,
+                    'parent_group' => $parentGroup,
+                    'tax_rate_central' => null,
+                    'tax_type' => null,
+                    'status' => $status,
                 ];
+
                 continue;
             }
 
             $masterXml = trim((string) ($masterResponse['body'] ?? ''));
 
             if ($masterXml === '') {
+
+                Log::channel('busy')->warning('Empty BUSY tax master XML', [
+                    'master_code' => $masterCode,
+                    'name' => $name,
+                ]);
+
                 $completeTaxes[] = [
                     'master_code' => $masterCode,
                     'name' => $name,
-                    'master_type' => trim((string) ($attributes['MasterType'] ?? '')),
-                    'parent_group' => trim((string) ($attributes['ParentGrp'] ?? '')),
-                    'status' => (($attributes['DeactiveMaster'] ?? '') === 'True') ? 'Inactive' : 'Active',
+                    'master_type' => $masterType,
+                    'parent_group' => $parentGroup,
+                    'tax_rate_central' => null,
+                    'tax_type' => null,
+                    'status' => $status,
                 ];
 
                 continue;
             }
 
-            libxml_use_internal_errors(true);
+            // Step 5: Parse complete tax master XML.
             $tax = simplexml_load_string($masterXml);
+
             if ($tax === false) {
-                Log::channel('busy')->warning('Failed to parse BUSY Master XML for tax', [
+
+                Log::channel('busy')->warning('Failed to parse BUSY tax master XML', [
                     'master_code' => $masterCode,
                     'name' => $name,
-                    'body' => $masterXml,
                     'errors' => libxml_get_errors(),
                 ]);
+
                 libxml_clear_errors();
+
+                // Keep basic MASTER1 information.
                 $completeTaxes[] = [
                     'master_code' => $masterCode,
                     'name' => $name,
-                    'master_type' => trim((string) ($attributes['MasterType'] ?? '')),
-                    'parent_group' => trim((string) ($attributes['ParentGrp'] ?? '')),
-                    'status' => (($attributes['DeactiveMaster'] ?? '') === 'True') ? 'Inactive' : 'Active',
+                    'master_type' => $masterType,
+                    'parent_group' => $parentGroup,
+                    'tax_rate_central' => null,
+                    'tax_type' => null,
+                    'status' => $status,
                 ];
+
                 continue;
             }
 
-            /*Complete BUSY tax information.
-         * Keep the fields generic here because the exact
-         * tax-rate XML field can vary between BUSY versions.
-         * Percentage is resolved from the tax name in DSA.*/
+            // Step 6: Extract TaxRateCentral from nested XML.
+            $taxRateCentral = trim((string) (
+                $tax->BranchEntries
+                ->BranchTaxDetail
+                ->DateWiseInfo
+                ->DateWiseTaxInfo
+                ->TaxRateCentral ?? ''
+            ));
+
+            $taxRateCentral = is_numeric($taxRateCentral)
+                ? (float) $taxRateCentral
+                : null;
+
+            // Step 7: Store complete tax information.
             $completeTaxes[] = [
                 'master_code' => $masterCode,
                 'name' => trim((string) ($tax->Name ?? $name)) ?: $name,
-                'master_type' => trim((string) ($tax->MasterType ?? $attributes['MasterType'] ?? '')) ?: null,
-                'parent_group' => trim((string) ($tax->ParentGroup ?? $attributes['ParentGrp'] ?? '')) ?: null,
-                'tax_type' => trim((string) ($tax->TaxType ?? '')) ?: null,
-                'status' => (($attributes['DeactiveMaster'] ?? '') === 'True') ? 'Inactive' : 'Active',
+                'master_type' => $masterType,
+                'parent_group' => $parentGroup,
+
+                // Actual central tax rate from BUSY XML.
+                'tax_rate_central' => $taxRateCentral,
+
+                'tax_type' => trim(
+                    (string) ($tax->TaxType ?? '')
+                ) ?: null,
+
+                'status' => $status,
             ];
         }
-        Log::channel('busy')->info('Complete BUSY Taxes', [
+
+        libxml_clear_errors();
+
+        Log::channel('busy')->info('Complete BUSY Taxes Fetched', [
             'count' => count($completeTaxes),
             'taxes' => $completeTaxes,
         ]);
+
+        // Step 8: Return original response with complete tax data.
         return [
             ...$response,
             'taxes' => $completeTaxes,
@@ -505,7 +573,8 @@ class BusyApiService
     /** Fetch BUSY products/items.*/
     public function getItems(): array
     {
-        $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 6 AND PARENTGRP = 401";
+        // New dai
+        $query = "SELECT * FROM MASTER1 WHERE MASTERTYPE = 6";
         $response = $this->executeQuery($query);
         if (!($response['success'] ?? false)) {
             return $response;

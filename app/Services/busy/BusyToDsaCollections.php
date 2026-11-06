@@ -1,5 +1,5 @@
 <?php
-
+//New dai all
 namespace App\Services\busy;
 
 use App\Models\Collection;
@@ -18,6 +18,7 @@ class BusyToDsaCollections
 
     public function fetchCollections(int $companyId): array
     {
+
         $result = [
             'success' => false,
             'company_id' => $companyId,
@@ -25,6 +26,7 @@ class BusyToDsaCollections
             'inserted' => 0,
             'updated' => 0,
             'skipped' => 0,
+            'deactivated' => 0,
             'error' => null,
         ];
 
@@ -39,8 +41,10 @@ class BusyToDsaCollections
 
             $vouchers = $response['collections'] ?? [];
             $result['fetched'] = count($vouchers);
+            $busyCollectionIds = [];
             foreach ($vouchers as $voucher) {
                 $externalId = trim((string) ($voucher['busy_vch_code'] ?? ''));
+                $busyCollectionIds[] = $externalId;
                 if ($externalId === '') {
                     $result['skipped']++;
                     continue;
@@ -100,7 +104,7 @@ class BusyToDsaCollections
                         // 'collection_types_id' => $collectionType?->id,
                         'collection_types_id' => 1,
 
-                        'payment_note' => $this->buildPaymentNote($voucher,$customerRow),
+                        'payment_note' => $this->buildPaymentNote($voucher, $customerRow),
                         'payment_status_note' => null,
 
                         // Not available reliably from the current TRAN2 data.
@@ -109,7 +113,7 @@ class BusyToDsaCollections
                         'due_payment' => 0,
                         'include_in_credit' => 0,
                         'bank_id' => null,
-                        'bank_name' => null,
+                        // 'bank_name' => null,
 
                         'status' => 'Active',
                         'updated_at' => $timestamp,
@@ -142,6 +146,10 @@ class BusyToDsaCollections
                 }
             }
             $result['success'] = true;
+            $result['deactivated'] = $this->deactivateMissingCollections(
+                $busyCollectionIds,
+                $companyId
+            );
             Log::channel('busy')->info(
                 'BUSY collection sync completed',
                 $result
@@ -167,7 +175,7 @@ class BusyToDsaCollections
             if ($masterCode === '') {
                 continue;
             }
-            
+
             $client = DB::table('parties_busy')
                 ->where('company_id', $companyId)
                 ->where('busyparty_id', $masterCode)
@@ -183,7 +191,8 @@ class BusyToDsaCollections
     }
 
     /** Return a non-customer ledger row, if present. */
-    private function findPaymentLedger(array $rows, string $customerMasterCode): ?array {
+    private function findPaymentLedger(array $rows, string $customerMasterCode): ?array
+    {
         foreach ($rows as $row) {
             if (trim((string) ($row['master_code'] ?? '')) !== trim($customerMasterCode)) {
                 return $row;
@@ -193,7 +202,8 @@ class BusyToDsaCollections
     }
 
     /** Include voucher and customer-row narration in the payment note.*/
-    private function buildPaymentNote(array $voucher, array $customerRow): ?string {
+    private function buildPaymentNote(array $voucher, array $customerRow): ?string
+    {
         $parts = [];
         if (!empty($voucher['voucher_no'])) {
             $parts[] = 'BUSY Voucher: ' . trim((string) $voucher['voucher_no']);
@@ -204,4 +214,30 @@ class BusyToDsaCollections
         }
         return empty($parts) ? null : implode(' — ', $parts);
     }
+    /**
+ * Deactivate DSA collections that are missing from the latest BUSY response.
+ */
+private function deactivateMissingCollections(array $busyCollectionIds, int $companyId): int
+{
+    $busyCollectionIds = collect($busyCollectionIds)
+        ->filter()
+        ->map(fn ($id) => trim((string) $id))
+        ->unique()
+        ->values()
+        ->toArray();
+
+    // Never deactivate everything if BUSY returns an empty response.
+    if (empty($busyCollectionIds)) {
+        return 0;
+    }
+
+    return Collection::where('company_id', $companyId)
+        ->whereNotNull('busycollection_id')
+        ->whereNotIn('busycollection_id', $busyCollectionIds)
+        ->where('status', '!=', 'Inactive')
+        ->update([
+            'deleted_at' => now(),
+            'updated_at' => now(),
+        ]);
+}
 }

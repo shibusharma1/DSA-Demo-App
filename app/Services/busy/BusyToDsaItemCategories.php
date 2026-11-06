@@ -141,6 +141,7 @@ class BusyToDsaItemCategories
                 'updated_at' => now(),
             ];
 
+            Log::info("Item categories",[$category['status']]);
             $existing = DB::table($this->categoryTable)
                 ->where('company_id', $company_id)
                 ->where('busyitemcategory_id', $busyCategoryId)

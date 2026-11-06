@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Services\busy;
 
 use App\Services\BusyApiService;
@@ -79,7 +80,8 @@ class BusyToDsaTaxes
         }
     }
 
-    private function createOrUpdateDsaTaxes(array $taxes, int $company_id): array {
+    private function createOrUpdateDsaTaxes(array $taxes, int $company_id): array
+    {
         $inserted = 0;
         $updated = 0;
         $skipped = 0;
@@ -92,7 +94,7 @@ class BusyToDsaTaxes
                 continue;
             }
 
-            $percent = $this->extractTaxPercent($name);
+            $percent = is_numeric($tax['tax_rate_central'] ?? null) ? (float) $tax['tax_rate_central'] : 0.0;
             $data = [
                 'name' => $name,
                 'display_name' => $name,
@@ -129,11 +131,12 @@ class BusyToDsaTaxes
         ];
     }
 
-    private function deactivateMissingTaxes(array $taxes, int $company_id): int {
+    private function deactivateMissingTaxes(array $taxes, int $company_id): int
+    {
         $busyTaxIds = collect($taxes)
             ->pluck('master_code')
             ->filter()
-            ->map(fn ($id) => trim((string) $id))
+            ->map(fn($id) => trim((string) $id))
             ->unique()
             ->values()
             ->toArray();
@@ -141,7 +144,7 @@ class BusyToDsaTaxes
         if (empty($busyTaxIds)) {
             return 0;
         }
-    
+
         return DB::table($this->taxTable)
             ->where('company_id', $company_id)
             ->whereNotNull('busytax_id')
