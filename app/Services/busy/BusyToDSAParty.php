@@ -57,7 +57,7 @@ class BusyToDSAParty
             $result['skipped'] = $sync['skipped'];
             $result['deactivated'] = $this->deactivateMissingParties($parties, $company_id);
             $result['success'] = true;
-            Log::channel('busy')->info('Party Pull Completed', [
+            Log::channel('busy_logs')->info('Party Pull Completed', [
                 'company_id' => $company_id,
                 'fetched' => $result['fetched'],
                 'inserted' => $result['inserted'],
@@ -68,7 +68,7 @@ class BusyToDSAParty
             return $result;
         } catch (Throwable $e) {
             $result['error'] = $e->getMessage();
-            Log::channel('busy')->error('BUSY Party Sync Failed', [
+            Log::channel('busy_logs')->error('BUSY Party Sync Failed', [
                 'company_id' => $company_id,
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -101,7 +101,7 @@ class BusyToDSAParty
             //     $country_info = Country::find($countryId);
             //     $phone_code = $country_info->phonecode ?? ''; // Or whatever field you need
             // }
-            Log::info('Party Type checking',[$party['parent_group']]);
+            Log::info('Party Type checking', [$party['parent_group']]);
             // Manjit dai update
             // if (!empty($party['parent_group'])) {
             //     $partyType = PartyType::firstOrCreate(
@@ -149,6 +149,8 @@ class BusyToDSAParty
                 // Manjit dai Update
                 // 'client_type' => $partyType->id ?? 0,
                 'name' => !empty($party['contact']) ? trim((string) $party['contact']) : null,
+                'client_code' => !empty($party['alias']) ? trim((string) $party['alias']) : null,
+                // 'parent_group' => !empty($party['parent_group']) ? trim((string) $party['parent_group']) : null,
                 'phone' => !empty($party['telephone']) ? trim((string) $party['telephone']) : null,
                 'mobile' => !empty($party['mobile']) ? trim((string) $party['mobile']) : null,
                 'fax' => !empty($party['fax']) ? trim((string) $party['fax']) : null,
@@ -169,6 +171,7 @@ class BusyToDSAParty
                 'updated_at' => now(),
             ];
 
+            // $updateData = $this->getBusyPartyUpdateData($party, $data);
             $existing = DB::table($this->partiesTable)
                 ->where('company_id', $company_id)
                 ->where('busyparty_id', $busyPartyId)
@@ -195,6 +198,39 @@ class BusyToDSAParty
             'skipped' => $skipped,
         ];
     }
+
+    // private function getBusyPartyUpdateData(
+    //     array $party,
+    //     array $data
+    // ): array {
+    //     $detailsLoaded = $party['details_loaded'] ?? true;
+
+    //     if ($detailsLoaded) {
+    //         // Complete XML: preserve normal update behavior.
+    //         // Explicit null values may clear existing values.
+    //         return $data;
+    //     }
+
+    //     // SC=9 failed: keep only fields reliably obtained
+    //     // from MASTER1. Never clear detailed fields.
+    //     $allowedFields = [
+    //         'name',
+    //         'status',
+    //         'alias',
+    //         'print_name',
+    //         'parent_group',
+    //         'tmp_parent_group_code',
+    //     ];
+
+    //     return array_filter(
+    //         $data,
+    //         function ($value, $column) use ($allowedFields) {
+    //             return in_array($column, $allowedFields, true)
+    //                 && $value !== null;
+    //         },
+    //         ARRAY_FILTER_USE_BOTH
+    //     );
+    // }
 
     private function deactivateMissingParties(array $parties, int $company_id): int
     {

@@ -38,7 +38,7 @@ class BusyToDsaPartyOutstanding
                 $amount = (float) ($outstanding['due_amount'] ?? 0);
                 if ($masterCode === '') {
                     $result['skipped']++;
-                    Log::channel('busy')->warning(
+                    Log::channel('busy_logs')->warning(
                         'BUSY outstanding skipped: master code missing',
                         [
                             'company_id' => $companyId,
@@ -56,7 +56,7 @@ class BusyToDsaPartyOutstanding
                 $party = DB::table('parties_busy')->where('company_id', $companyId)->where('busyparty_id', $masterCode)->first();
                 if (!$party) {
                     $result['skipped']++;
-                    Log::channel('busy')->warning(
+                    Log::channel('busy_logs')->warning(
                         'BUSY outstanding skipped: party not mapped',
                         [
                             'company_id' => $companyId,
@@ -70,7 +70,7 @@ class BusyToDsaPartyOutstanding
                 $result['matched']++;
                 DB::table('parties_busy')->where('id', $party->id)->update(['due_amount' => round($amount, 2),'updated_at' => now(),]);
                 $result['updated']++;
-                Log::channel('busy')->info(
+                Log::channel('busy_logs')->info(
                     'BUSY customer outstanding updated',
                     [
                         'company_id' => $companyId,
@@ -82,11 +82,11 @@ class BusyToDsaPartyOutstanding
                 );
             }
             $result['success'] = true;
-            Log::channel('busy')->info('BUSY customer outstanding sync completed', $result);
+            Log::channel('busy_logs')->info('BUSY customer outstanding sync completed', $result);
             return $result;
         } catch (Throwable $e) {
             $result['error'] = $e->getMessage();
-            Log::channel('busy')->error(
+            Log::channel('busy_logs')->error(
                 'BUSY customer outstanding sync failed',
                 [
                     'company_id' => $companyId,

@@ -24,9 +24,9 @@
                     <th class="p-3">Name</th>
                     <th class="p-3">Code</th>
                     <th class="p-3">MRP</th>
-                    <th class="p-3">Stock</th>
-                    <th class="p-3">Zoho Id</th>
-                    <th class="p-3">ErpNext Id</th>
+                    <th class="p-3">Category</th>
+                    <th class="p-3">Busy Id</th>
+                    <th class="p-3">Status</th>
                     <th class="p-3">Actions</th>
                 </tr>
             </thead>
@@ -37,9 +37,9 @@
                         <td class="p-3">{{ $product->product_name }}</td>
                         <td class="p-3">{{ $product->product_code }}</td>
                         <td class="p-3">{{ $product->mrp }}</td>
-                        <td class="p-3">{{ $product->inventory_available_quantity }}</td>
-                        <td class="p-3">{{ $product->zoho_id }}</td>
-                        <td class="p-3">{{ $product->erpnext_id }}</td>
+                        <td class="p-3">{{ $product->category_id }}</td>
+                        <td class="p-3">{{ $product->busyproduct_id }}</td>
+                        <td class="p-3">{{ $product->status }}</td>
 
                         <td class="p-3 flex gap-2">
                             <a href="{{ route('products.edit', $product->id) }}"

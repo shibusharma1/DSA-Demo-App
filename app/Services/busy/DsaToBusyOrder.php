@@ -29,7 +29,7 @@ class DsaToBusyOrder
         try {
 
             /* Load complete order */
-            $order = Order::with(['client', 'details.product', 'details.unit', 'details.tax'])->find($orderId);
+            $order = Order::with(['client', 'orderdetails','taxes'])->find($orderId);
              Log::info("Data send to Busy from the Sync to busy function:-",[$order]);
             if (!$order) {
                 throw new \RuntimeException('Order not found.');
@@ -71,7 +71,7 @@ class DsaToBusyOrder
             $xml = $this->buildSaleXml($order);
              Log::channel('frappy')->info("XML data send to the Busy form Push Order function:-",[$result]);
 
-            Log::channel('busy')->info(
+            Log::channel('busy_logs')->info(
                 'BUSY Sale XML Generated',
                 [
                     'order_id' => $order->id,
@@ -113,7 +113,7 @@ class DsaToBusyOrder
             $result['busyorder_id'] = $busyOrderId;
             $result['message'] = 'Order successfully synchronized with BUSY.';
 
-            Log::channel('busy')->info(
+            Log::channel('busy_logs')->info(
                 'BUSY Sale Sync Completed',
                 [
                     'order_id' => $order->id,
@@ -132,7 +132,7 @@ class DsaToBusyOrder
 
             $result['error'] = $e->getMessage();
 
-            Log::channel('busy')->error(
+            Log::channel('busy_logs')->error(
                 'BUSY Sale Sync Failed',
                 [
                     'order_id' => $orderId,

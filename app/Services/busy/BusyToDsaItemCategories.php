@@ -44,7 +44,7 @@ class BusyToDsaItemCategories
 
             $result['deactivated'] = $this->deactivateMissingItemCategories($categories, $company_id);
             $result['success'] = true;
-            Log::channel('busy')->info('Item Category Pull Completed', [
+            Log::channel('busy_logs')->info('Item Category Pull Completed', [
                 'company_id' => $company_id,
                 'fetched' => $result['fetched'],
                 'inserted' => $result['inserted'],
@@ -55,7 +55,7 @@ class BusyToDsaItemCategories
             return $result;
         } catch (Throwable $e) {
             $result['error'] = $e->getMessage();
-            Log::channel('busy')->error('BUSY Item Category Sync Failed', [
+            Log::channel('busy_logs')->error('BUSY Item Category Sync Failed', [
                 'company_id' => $company_id,
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -77,7 +77,7 @@ class BusyToDsaItemCategories
         libxml_use_internal_errors(true);
         $xml = simplexml_load_string($body);
         if ($xml === false) {
-            Log::channel('busy')->error(
+            Log::channel('busy_logs')->error(
                 'Failed to parse BUSY item category XML',
                 [
                     'errors' => libxml_get_errors(),
@@ -111,7 +111,7 @@ class BusyToDsaItemCategories
             ];
         }
 
-        Log::channel('busy')->info('Parsed BUSY Item Categories', [
+        Log::channel('busy_logs')->info('Parsed BUSY Item Categories', [
             'count' => count($categories),
             'categories' => $categories,
         ]);

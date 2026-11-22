@@ -61,7 +61,7 @@ class BusyToDsaItem
 
             $result['success'] = true;
 
-            Log::channel('busy')->info('Item Pull Completed', [
+            Log::channel('busy_logs')->info('Item Pull Completed', [
                 'company_id' => $company_id,
                 'fetched' => $result['fetched'],
                 'inserted' => $result['inserted'],
@@ -75,7 +75,7 @@ class BusyToDsaItem
 
             $result['error'] = $e->getMessage();
 
-            Log::channel('busy')->error('BUSY Item Sync Failed', [
+            Log::channel('busy_logs')->error('BUSY Item Sync Failed', [
                 'company_id' => $company_id,
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -90,70 +90,193 @@ class BusyToDsaItem
         }
     }
 
+    // private function createOrUpdateDsaProducts(array $items, int $company_id): array
+    // {
+    //     $inserted = 0;
+    //     $updated = 0;
+    //     $skipped = 0;
+
+    //     // Log::info("Unit test", [$items]);
+
+    //     foreach ($items as $item) {
+    //         $busyProductId = trim((string) ($item['master_code'] ?? ''));
+    //         $name = trim((string) ($item['name'] ?? ''));
+    //         if ($busyProductId === '' || $name === '') {
+    //             $skipped++;
+    //             continue;
+    //         }
+    //         $unitCode = trim((string) ($item['unit_name'] ?? ''));
+    //         $unitId = $unitCode !== '' ? $this->ensureUnitId($unitCode, $company_id) : null;
+    //         $categoryName = trim((string) ($item['parent_group'] ?? ''));
+    //         $categoryId = $categoryName !== '' ? $this->ensureCategoryId($categoryName, $company_id) : null;
+    //         // Manjit Dai Update for MRP
+    //         $mrp = $this->parseNumeric($item['mrp'] ?? null);
+    //         $taxIds = $this->resolveBusyTaxIds($item, $company_id);
+    //         $data = [
+    //             'product_name' => $name,
+    //             //Manjit dai update
+    //             'product_code' => $item['alias'],
+    //             'category_id' => $categoryId,
+    //             'brand' => null,
+    //             'unit' => $unitId,
+    //             'mrp' => $mrp,
+    //             //manjit dai udpate
+    //             // 'details' => null,
+    //             'details' => $item['short_desc'] ?? null,
+    //             'status' => $item['status'] ?? 'Active',
+    //             'updated_at' => now(),
+    //         ];
+
+    //         // Log::info("Product data check Shibu",[$data]);
+    //         $existing = DB::table($this->productsTable)
+    //             ->where('company_id', $company_id)
+    //             ->where('busyproduct_id', $busyProductId)
+    //             ->first();
+
+    //         // if ($existing) {
+    //         //     DB::table($this->productsTable)
+    //         //         ->where('id', $existing->id)
+    //         //         ->update($data);
+
+    //         //     $updated++;
+    //         // } else {
+    //         //     DB::table($this->productsTable)->insert([
+    //         //         'company_id' => $company_id,
+    //         //         'busyproduct_id' => $busyProductId,
+    //         //         ...$data,
+    //         //         'created_at' => now(),
+    //         //     ]);
+    //         //     $inserted++;
+    //         // }
+    //         DB::transaction(function () use (
+    //             $existing,
+    //             $company_id,
+    //             $busyProductId,
+    //             $data,
+    //             $taxIds,
+    //             &$inserted,
+    //             &$updated
+    //         ) {
+    //             if ($existing) {
+    //                 DB::table($this->productsTable)
+    //                     ->where('id', $existing->id)
+    //                     ->update($data);
+
+    //                 $productId = (int) $existing->id;
+    //                 $updated++;
+    //             } else {
+    //                 $productId = DB::table($this->productsTable)->insertGetId([
+    //                     'company_id' => $company_id,
+    //                     'busyproduct_id' => $busyProductId,
+    //                     ...$data,
+    //                     'created_at' => now(),
+    //                 ]);
+
+    //                 $inserted++;
+    //             }
+
+    //             if ($taxIds !== null) {
+    //                 $this->syncProductTaxes($productId, $taxIds);
+    //             }
+    //         });
+    //     }
+    //     return [
+    //         'inserted' => $inserted,
+    //         'updated' => $updated,
+    //         'skipped' => $skipped,
+    //     ];
+    // }
+
     private function createOrUpdateDsaProducts(array $items, int $company_id): array
     {
         $inserted = 0;
         $updated = 0;
         $skipped = 0;
 
-        // Log::info("Unit test", [$items]);
-
         foreach ($items as $item) {
             $busyProductId = trim((string) ($item['master_code'] ?? ''));
             $name = trim((string) ($item['name'] ?? ''));
+
             if ($busyProductId === '' || $name === '') {
                 $skipped++;
                 continue;
             }
-            $unitCode = trim((string) ($item['unit_name'] ?? ''));
-            $unitId = $unitCode !== '' ? $this->ensureUnitId($unitCode, $company_id) : null;
-            $categoryName = trim((string) ($item['parent_group'] ?? ''));
-            $categoryId = $categoryName !== '' ? $this->ensureCategoryId($categoryName, $company_id) : null;
-            // Manjit Dai Update for MRP
-            $mrp = $this->parseNumeric($item['mrp'] ?? null);
-            $data = [
-                'product_name' => $name,
-                //Manjit dai update
-                'product_code' => $item['alias'],
-                'category_id' => $categoryId,
-                'brand' => null,
-                'unit' => $unitId,
-                'mrp' => $mrp,
-                //manjit dai udpate
-                // 'details' => null,
-                'details' => $item['short_desc'] ?? null,
-                'status' => $item['status'] ?? 'Active',
-                'updated_at' => now(),
-            ];
 
-            // Log::info("Product data check Shibu",[$data]);
             $existing = DB::table($this->productsTable)
                 ->where('company_id', $company_id)
                 ->where('busyproduct_id', $busyProductId)
                 ->first();
 
-            if ($existing) {
-                DB::table($this->productsTable)
-                    ->where('id', $existing->id)
-                    ->update($data);
+            $detailsLoaded = (bool) ($item['details_loaded'] ?? false);
 
-                $updated++;
-            } else {
-                DB::table($this->productsTable)->insert([
-                    'company_id' => $company_id,
-                    'busyproduct_id' => $busyProductId,
-                    ...$data,
-                    'created_at' => now(),
-                ]);
-                $inserted++;
+            $data = [
+                'product_name' => $name,
+                'status' => $item['status'] ?? 'Active',
+                'updated_at' => now(),
+            ];
+
+            // Do not overwrite existing product details when SC=9 fails.
+            if ($detailsLoaded || !$existing) {
+                $unitCode = trim((string) ($item['unit_name'] ?? ''));
+                $unitId = $unitCode !== ''
+                    ? $this->ensureUnitId($unitCode, $company_id)
+                    : null;
+
+                $categoryName = trim((string) ($item['parent_group'] ?? ''));
+                $categoryId = $categoryName !== ''
+                    ? $this->ensureCategoryId($categoryName, $company_id)
+                    : null;
+
+                $data['product_code'] = $item['alias'] ?? null;
+                $data['category_id'] = $categoryId;
+                $data['brand'] = null;
+                $data['unit'] = $unitId;
+                $data['mrp'] = $this->parseNumeric($item['mrp'] ?? null);
+                $data['details'] = $item['short_desc'] ?? null;
             }
+
+            $taxIds = $this->resolveBusyTaxIds($item, $company_id);
+
+            DB::transaction(function () use (
+                $existing,
+                $company_id,
+                $busyProductId,
+                $data,
+                $taxIds,
+                &$inserted,
+                &$updated
+            ) {
+                if ($existing) {
+                    DB::table($this->productsTable)
+                        ->where('id', $existing->id)
+                        ->update($data);
+
+                    $productId = (int) $existing->id;
+                    $updated++;
+                } else {
+                    $productId = DB::table($this->productsTable)->insertGetId([
+                        'company_id' => $company_id,
+                        'busyproduct_id' => $busyProductId,
+                        ...$data,
+                        'created_at' => now(),
+                    ]);
+
+                    $inserted++;
+                }
+
+                if ($taxIds !== null) {
+                    $this->syncProductTaxes($productId, $taxIds);
+                }
+            });
         }
+
         return [
             'inserted' => $inserted,
             'updated' => $updated,
             'skipped' => $skipped,
         ];
     }
+
 
     private function ensureUnitId(string $unitCode, int $company_id): ?int
     {
@@ -220,7 +343,7 @@ class BusyToDsaItem
         ]);
         return $this->categoryCache[$company_id][$key] = (int) $id;
     }
-    
+
     private function deactivateMissingProducts(array $items, int $company_id): int
     {
         $busyProductIds = collect($items)
@@ -269,5 +392,53 @@ class BusyToDsaItem
             return null;
         }
         return (float) $value;
+    }
+
+    private function resolveBusyTaxIds(array $item, int $company_id): ?array
+    {
+        // Incomplete BUSY XML must not change existing tax assignments.
+        if (!($item['details_loaded'] ?? false)) {
+            return null;
+        }
+
+        $busyTaxType = trim((string) ($item['tax_type'] ?? ''));
+
+        // No tax information: preserve existing associations.
+        if ($busyTaxType === '') {
+            return null;
+        }
+
+        // Match BUSY tax to the already-synced DSA tax.
+        $taxIds = DB::table('tax_types')
+            ->where('company_id', $company_id)
+            ->where('busytax_id', $busyTaxType)
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($taxIds)) {
+            Log::channel('busy_logs')->warning('BUSY product tax not found', [
+                'company_id' => $company_id,
+                'master_code' => $item['master_code'] ?? null,
+                'tax_type' => $busyTaxType,
+            ]);
+
+            return null;
+        }
+
+        return $taxIds;
+    }
+    private function syncProductTaxes(int $productId, array $taxIds): void
+    {
+        // Replace associations only when a valid tax mapping exists.
+        DB::table('tax_on_products')
+            ->where('product_id', $productId)
+            ->delete();
+
+        foreach (array_unique($taxIds) as $taxId) {
+            DB::table('tax_on_products')->insert([
+                'product_id' => $productId,
+                'tax_type_id' => $taxId,
+            ]);
+        }
     }
 }

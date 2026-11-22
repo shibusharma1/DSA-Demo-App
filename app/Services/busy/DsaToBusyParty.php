@@ -25,7 +25,7 @@ class DsaToBusyParty
         try {
             $xml = $this->buildAccountXml($party);
 
-            Log::channel('busy')->info(
+            Log::channel('busy_logs')->info(
                 'BUSY Party Create XML Generated',
                 [
                     'party_id' => $party->id,
@@ -59,7 +59,7 @@ class DsaToBusyParty
                 'busy_synced_at' => now(),
             ]);
 
-            Log::channel('busy')->info('BUSY Party Created Successfully',
+            Log::channel('busy_logs')->info('BUSY Party Created Successfully',
                 [
                     'party_id' => $party->id,
                     'party_name' => $party->company_name,
@@ -81,7 +81,7 @@ class DsaToBusyParty
                 'busy_sync_message' => $e->getMessage(),
             ]);
 
-            Log::channel('busy')->error('BUSY Party Creation Failed',
+            Log::channel('busy_logs')->error('BUSY Party Creation Failed',
                 [
                     'party_id' => $party->id,
                     'party_name' => $party->company_name,
@@ -115,7 +115,7 @@ class DsaToBusyParty
 
             $xml = $this->buildAccountXml($party);
 
-            Log::channel('busy')->info('BUSY Party Modify XML Generated',
+            Log::channel('busy_logs')->info('BUSY Party Modify XML Generated',
                 [
                     'party_id' => $party->id,
                     'party_name' => $party->company_name,
@@ -136,7 +136,7 @@ class DsaToBusyParty
                 'busy_synced_at' => now(),
             ]);
 
-            Log::channel('busy')->info('BUSY Party Updated Successfully',
+            Log::channel('busy_logs')->info('BUSY Party Updated Successfully',
                 [
                     'party_id' => $party->id,
                     'party_name' => $party->company_name,
@@ -158,7 +158,7 @@ class DsaToBusyParty
                 'busy_sync_message' => $e->getMessage(),
             ]);
 
-            Log::channel('busy')->error('BUSY Party Update Failed',
+            Log::channel('busy_logs')->error('BUSY Party Update Failed',
                 [
                     'party_id' => $party->id,
                     'party_name' => $party->company_name,

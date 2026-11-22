@@ -4,6 +4,7 @@ namespace App\Services\busy;
 
 use App\Models\Collection;
 use App\Services\BusyApiService;
+use Carbon\Carbon;
 use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use SimpleXMLElement;
@@ -36,7 +37,7 @@ class DsaToBusyCollection
 
             $xml = $this->buildReceiptXml($collection, $client);
 
-            Log::channel('busy')->info(
+            Log::channel('busy_logs')->info(
                 'BUSY Collection Receipt XML',
                 [
                     'collection_id' => $collection->id,
@@ -64,7 +65,7 @@ class DsaToBusyCollection
                     'success' => true,
                     'collection_id' => $collection->id,
                     'busycollection_id' =>
-                     $collection->busycollection_id,
+                    $collection->busycollection_id,
                     'message' =>
                     'BUSY receipt updated successfully.',
                 ];
@@ -106,7 +107,7 @@ class DsaToBusyCollection
             $verification = $this->verifyReceipt($voucherCode);
 
             if (!($verification['success'] ?? false)) {
-                Log::channel('busy')->error(
+                Log::channel('busy_logs')->error(
                     'BUSY Receipt Verification Failed',
                     [
                         'collection_id' => $collection->id,
@@ -136,7 +137,7 @@ class DsaToBusyCollection
                 'message' => 'BUSY receipt created successfully.',
             ];
         } catch (Throwable $e) {
-            Log::channel('busy')->error(
+            Log::channel('busy_logs')->error(
                 'BUSY Collection Sync Failed',
                 [
                     'collection_id' => $collection->id ?? null,
@@ -154,7 +155,8 @@ class DsaToBusyCollection
         }
     }
 
-    protected function buildReceiptXml(Collection $collection, $client): string {
+    protected function buildReceiptXml(Collection $collection, $client): string
+    {
         /* 1. Resolve party*/
         $partyName = trim((string) ($client->company_name ?? $client->name ?? ''));
 
@@ -177,13 +179,13 @@ class DsaToBusyCollection
         }
 
         /* 4. Date */
-        $date = $collection->payment_date ? $collection->payment_date->format('d-m-Y') : now()->format('d-m-Y');
+        $date = $collection->payment_date ? Carbon::parse($collection->payment_date)->format('d-m-Y') : now()->format('d-m-Y');
 
         /* 5. Narration */
         $narration = trim((string) ($collection->payment_note ?? ''));
 
         /* 6. Voucher series  */
-        $series = trim((string) ($collection->busy_voucher_series ?: config('services.busy.voucher_series','Main')));
+        $series = trim((string) ($collection->busy_voucher_series ?: config('services.busy.voucher_series', 'Main')));
 
         /* 7. Voucher number */
         $voucherNo = trim((string) ($collection->busy_voucher_no ?? ''));
@@ -211,7 +213,9 @@ class DsaToBusyCollection
         $this->addNode($other, 'Narration1', $narration);
         $this->addNode($other, 'GrDate', $date);
         $this->addNode($other, 'ChequeNo', $collection->cheque_no ?? '');
-        $this->addNode($other, 'ChequeDate', $collection->cheque_date ? $collection->cheque_date->format('d-m-Y') : '');
+        // $this->addNode($other, 'ChequeDate', $collection->cheque_date ? $collection->cheque_date->format('d-m-Y') : '');
+        $chequeDate = !empty($collection->cheque_date) ? Carbon::parse($collection->cheque_date)->format('d-m-Y') : '';
+        $this->addNode($other, 'ChequeDate', $chequeDate);
 
         /* 11. ACCOUNTING ENTRIES
          * Receipt:
@@ -252,7 +256,8 @@ class DsaToBusyCollection
         return $this->normalizeBusyXml($xml->asXML());
     }
 
-    protected function verifyReceipt(string|int $voucherCode): array {
+    protected function verifyReceipt(string|int $voucherCode): array
+    {
 
         $voucherCode = (int) $voucherCode;
 

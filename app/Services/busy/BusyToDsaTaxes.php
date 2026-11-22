@@ -34,7 +34,7 @@ class BusyToDsaTaxes
             /* Get complete taxes from BUSY.*/
             $response = $this->busyApiService->getTaxes();
 
-            Log::channel('busy')->info('BUSY Tax Data', [
+            Log::channel('busy_logs')->info('BUSY Tax Data', [
                 'company_id' => $company_id,
                 'response' => $response,
             ]);
@@ -57,7 +57,7 @@ class BusyToDsaTaxes
 
             $result['success'] = true;
 
-            Log::channel('busy')->info('Tax Pull Completed', [
+            Log::channel('busy_logs')->info('Tax Pull Completed', [
                 'company_id' => $company_id,
                 'fetched' => $result['fetched'],
                 'inserted' => $result['inserted'],
@@ -69,7 +69,7 @@ class BusyToDsaTaxes
             return $result;
         } catch (Throwable $e) {
             $result['error'] = $e->getMessage();
-            Log::channel('busy')->error('BUSY Tax Sync Failed', [
+            Log::channel('busy_logs')->error('BUSY Tax Sync Failed', [
                 'company_id' => $company_id,
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),

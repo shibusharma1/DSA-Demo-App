@@ -32,7 +32,7 @@ class BusyToDsaUnit
 
         try {
             $response = $this->busyApiService->getUnits();
-            Log::channel('busy')->info('Unit data received', [
+            Log::channel('busy_logs')->info('Unit data received', [
                 'response' => $response,
             ]);
 
@@ -48,7 +48,7 @@ class BusyToDsaUnit
             $result['skipped'] = $sync['skipped'];
             $result['deactivated'] = $this->deactivateMissingUnits($units, $company_id);
             $result['success'] = true;
-            Log::channel('busy')->info('Unit Pull Completed', [
+            Log::channel('busy_logs')->info('Unit Pull Completed', [
                 'company_id' => $company_id,
                 'fetched' => $result['fetched'],
                 'inserted' => $result['inserted'],
@@ -59,7 +59,7 @@ class BusyToDsaUnit
             return $result;
         } catch (Throwable $e) {
             $result['error'] = $e->getMessage();
-            Log::channel('busy')->error('BUSY Unit Sync Failed', [
+            Log::channel('busy_logs')->error('BUSY Unit Sync Failed', [
                 'company_id' => $company_id,
                 'message' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -79,7 +79,7 @@ class BusyToDsaUnit
         libxml_use_internal_errors(true);
         $xml = simplexml_load_string($body);
         if ($xml === false) {
-            Log::channel('busy')->error('Failed to parse BUSY unit XML', [
+            Log::channel('busy_logs')->error('Failed to parse BUSY unit XML', [
                 'body' => $body,
                 'errors' => libxml_get_errors(),
             ]);
@@ -106,7 +106,7 @@ class BusyToDsaUnit
                 'status' => $status,
             ];
         }
-        Log::channel('busy')->info('Parsed BUSY Units', [
+        Log::channel('busy_logs')->info('Parsed BUSY Units', [
             'count' => count($units),
             'units' => $units,
         ]);

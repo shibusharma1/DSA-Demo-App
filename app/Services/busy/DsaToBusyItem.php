@@ -41,7 +41,7 @@ class DsaToBusyProduct
 
             $xml = $this->buildProductXml($product);
 
-            Log::channel('busy')->info('BUSY Product Request', [
+            Log::channel('busy_logs')->info('BUSY Product Request', [
                 'product_id' => $product['id'] ?? null,
                 'product_name' => $product['product_name'] ?? null,
                 'xml_length' => strlen($xml),
@@ -58,7 +58,7 @@ class DsaToBusyProduct
             $result['body'] = $response['body'] ?? null;
             $result['success'] = $response['success'] ?? false;
 
-            Log::channel('busy')->info('BUSY Product Response', [
+            Log::channel('busy_logs')->info('BUSY Product Response', [
                 'product_id' => $product['id'] ?? null,
                 'product_name' => $product['product_name'] ?? null,
                 'success' => $result['success'],
@@ -71,7 +71,7 @@ class DsaToBusyProduct
         } catch (Throwable $e) {
             $result['error'] = $e->getMessage();
 
-            Log::channel('busy')->error('BUSY Product Push Failed', [
+            Log::channel('busy_logs')->error('BUSY Product Push Failed', [
                 'product_id' => $product['id'] ?? null,
                 'product_name' => $product['product_name'] ?? null,
                 'message' => $e->getMessage(),
