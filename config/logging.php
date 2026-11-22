@@ -132,7 +132,7 @@ return [
             'path' => storage_path('logs/frappy.log'),
             'level' => 'debug',
         ],
-        'busy' => [
+        'busy_logs' => [
             'driver' => 'single',
             'path' => storage_path('logs/busy.log'),
             'level' => 'debug',

@@ -164,9 +164,9 @@ class BusyToDSAParty
                 'pan' => !empty($party['it_pan']) ? trim((string) $party['it_pan']) : null,
                 // 'gst_no' => !empty($party['gst_no']) ? trim((string) $party['gst_no']) : null,
                 // '' => !empty($party['']) ? trim((string) $party['']) : null,
-                'credit_days' => is_numeric($party['credit_days_sale'] ?? null) ? (int) $party['credit_days_sale'] : null,
-                'opening_balance' => is_numeric($party['op_bal'] ?? null) ? (float) $party['op_bal'] : null,
-                'closing_balance' => is_numeric($party['py_bal'] ?? null) ? (float) $party['py_bal'] : null,
+                'credit_days' => is_numeric($party['credit_days'] ?? null) ? (int) $party['credit_days'] : null,
+                'opening_balance' => is_numeric($party['op_bal'] ?? null) ? abs((float) $party['op_bal']) : null,
+                'closing_balance' => is_numeric($party['py_bal'] ?? null) ? abs((float) $party['py_bal']) : null,
                 'status' => !empty($party['status']) ? trim((string) $party['status']) : null,
                 'updated_at' => now(),
             ];
