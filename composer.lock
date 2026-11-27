@@ -2796,7 +2796,7 @@
                     "homepage": "https://www.php-fig.org/"
                 }
             ],
-            "description": "Common interface for HTTP clients",
+            "description": "Common interface for HTTP parties_busy",
             "homepage": "https://github.com/php-fig/http-client",
             "keywords": [
                 "http",

@@ -25,8 +25,8 @@ return new class extends Migration
             | Customer / Party
             |--------------------------------------------------------------------------
             |
-            | References DSA clients table.
-            | BUSY mapping is obtained through clients.busyparty_id.
+            | References DSA parties_busy table.
+            | BUSY mapping is obtained through parties_busy.busycustomer_id.
             |
             */
             $table->unsignedBigInteger('client_id')

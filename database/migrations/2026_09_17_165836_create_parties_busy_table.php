@@ -15,7 +15,7 @@ return new class extends Migration
             $table->unsignedBigInteger('company_id');
 
             /* BUSY Master */
-            $table->string('busyparty_id', 100)->nullable();
+            $table->string('busycustomer_id', 100)->nullable();
 
             $table->string('company_name')->nullable();
             $table->string('name')->nullable();

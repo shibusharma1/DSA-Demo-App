@@ -17,7 +17,6 @@ class OrderObserver
             entityId: $order->id,
             payload: [
                 'data' => $order->load('items')->toArray(),
-
                 'customer' => [
                     'id'           => $order->customer->id ?? null,
                     'zoho_id'      => $order->customer->zoho_id ?? null,

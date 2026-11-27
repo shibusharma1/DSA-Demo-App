@@ -94,7 +94,7 @@
                     Select Party
                 </option>
 
-                @foreach($clients as $client)
+                @foreach($parties_busy as $client)
 
                     @php
 
@@ -112,10 +112,10 @@
 
                         {{ $partyName }}
 
-                        @if($client->busyparty_id)
+                        @if($client->busycustomer_id)
 
                             — BUSY:
-                            {{ $client->busyparty_id }}
+                            {{ $client->busycustomer_id }}
 
                         @endif
 

@@ -109,10 +109,10 @@
 
                                 <td class="px-5 py-4 text-sm">
 
-                                    @if($party->busyparty_id)
+                                    @if($party->busycustomer_id)
 
                                         <span class="font-semibold text-slate-700">
-                                            {{ $party->busyparty_id }}
+                                            {{ $party->busycustomer_id }}
                                         </span>
 
                                     @else

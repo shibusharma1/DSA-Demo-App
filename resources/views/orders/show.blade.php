@@ -169,7 +169,7 @@
                     </p>
 
                     <p class="mt-1 font-mono text-sm text-slate-700">
-                        {{ $order->client->busyparty_id ?: 'Not mapped' }}
+                        {{ $order->client->busycustomer_id ?: 'Not mapped' }}
                     </p>
 
                 </div>

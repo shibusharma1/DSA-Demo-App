@@ -53,7 +53,7 @@ class DsaToBusyParty
             }
 
             $party->update([
-                'busyparty_id' => (string) $busyPartyId,
+                'busycustomer_id' => (string) $busyPartyId,
                 'busy_sync_status' => 'Synced',
                 'busy_sync_message' => null,
                 'busy_synced_at' => now(),
@@ -63,7 +63,7 @@ class DsaToBusyParty
                 [
                     'party_id' => $party->id,
                     'party_name' => $party->company_name,
-                    'busyparty_id' => $busyPartyId,
+                    'busycustomer_id' => $busyPartyId,
                 ]
             );
 
@@ -71,7 +71,7 @@ class DsaToBusyParty
                 'success' => true,
                 'action' => 'created',
                 'party_id' => $party->id,
-                'busyparty_id' => (string) $busyPartyId,
+                'busycustomer_id' => (string) $busyPartyId,
                 'message' => 'Customer created and saved to BUSY successfully.',
                 'error' => null,
             ];
@@ -94,7 +94,7 @@ class DsaToBusyParty
                 'success' => false,
                 'action' => 'created',
                 'party_id' => $party->id,
-                'busyparty_id' => null,
+                'busycustomer_id' => null,
                 'message' => null,
                 'error' => $e->getMessage(),
             ];
@@ -105,11 +105,11 @@ class DsaToBusyParty
     public function updateParty(PartyBusy $party): array
     {
         try {
-            if (empty($party->busyparty_id)) {
+            if (empty($party->busycustomer_id)) {
                 return $this->createParty($party);
             }
 
-            if (!ctype_digit((string) $party->busyparty_id)) {
+            if (!ctype_digit((string) $party->busycustomer_id)) {
                 throw new \RuntimeException('Invalid BUSY Master ID for this customer.');
             }
 
@@ -119,12 +119,12 @@ class DsaToBusyParty
                 [
                     'party_id' => $party->id,
                     'party_name' => $party->company_name,
-                    'busyparty_id' => $party->busyparty_id,
+                    'busycustomer_id' => $party->busycustomer_id,
                     'xml' => $xml,
                 ]
             );
 
-            $response = $this->busyApiService->modifyMaster((int) $party->busyparty_id, $xml);
+            $response = $this->busyApiService->modifyMaster((int) $party->busycustomer_id, $xml);
 
             if (!($response['success'] ?? false)) {
                 throw new \RuntimeException($response['description'] ?? 'BUSY customer update failed.');
@@ -140,7 +140,7 @@ class DsaToBusyParty
                 [
                     'party_id' => $party->id,
                     'party_name' => $party->company_name,
-                    'busyparty_id' => $party->busyparty_id,
+                    'busycustomer_id' => $party->busycustomer_id,
                 ]
             );
 
@@ -148,7 +148,7 @@ class DsaToBusyParty
                 'success' => true,
                 'action' => 'updated',
                 'party_id' => $party->id,
-                'busyparty_id' => (string) $party->busyparty_id,
+                'busycustomer_id' => (string) $party->busycustomer_id,
                 'message' => 'Customer updated and saved to BUSY successfully.',
                 'error' => null,
             ];
@@ -162,7 +162,7 @@ class DsaToBusyParty
                 [
                     'party_id' => $party->id,
                     'party_name' => $party->company_name,
-                    'busyparty_id' => $party->busyparty_id,
+                    'busycustomer_id' => $party->busycustomer_id,
                     'message' => $e->getMessage(),
                     'trace' => $e->getTraceAsString(),
                 ]
@@ -172,7 +172,7 @@ class DsaToBusyParty
                 'success' => false,
                 'action' => 'updated',
                 'party_id' => $party->id,
-                'busyparty_id' => $party->busyparty_id,
+                'busycustomer_id' => $party->busycustomer_id,
                 'message' => null,
                 'error' => $e->getMessage(),
             ];

@@ -29,7 +29,7 @@ class DsaToBusyCollection
                 throw new RuntimeException('Collection client was not found.');
             }
 
-            $busyPartyCode = trim((string) ($client->busyparty_id ?? ''));
+            $busyPartyCode = trim((string) ($client->busycustomer_id ?? ''));
 
             if ($busyPartyCode === '') {
                 throw new RuntimeException('Selected party is not synchronized with BUSY.');

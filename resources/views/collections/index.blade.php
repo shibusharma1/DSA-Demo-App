@@ -302,13 +302,13 @@
                                     </strong>
 
                                     @if(
-                                        $collection->client?->busyparty_id
+                                        $collection->client?->busycustomer_id
                                     )
 
                                         <div class="small text-muted">
 
                                             BUSY Party:
-                                            {{ $collection->client->busyparty_id }}
+                                            {{ $collection->client->busycustomer_id }}
 
                                         </div>
 

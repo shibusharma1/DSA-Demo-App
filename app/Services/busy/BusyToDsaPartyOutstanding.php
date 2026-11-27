@@ -50,10 +50,10 @@ class BusyToDsaPartyOutstanding
                 }
                 /*
                  * Match BUSY customer with DSA party
-                 * parties_busy.busyparty_id
+                 * parties_busy.busycustomer_id
                  * contains BUSY MasterCode.
                  */
-                $party = DB::table('parties_busy')->where('company_id', $companyId)->where('busyparty_id', $masterCode)->first();
+                $party = DB::table('parties_busy')->where('company_id', $companyId)->where('busycustomer_id', $masterCode)->first();
                 if (!$party) {
                     $result['skipped']++;
                     Log::channel('busy_logs')->warning(
@@ -75,7 +75,7 @@ class BusyToDsaPartyOutstanding
                     [
                         'company_id' => $companyId,
                         'party_id' => $party->id,
-                        'busyparty_id' => $masterCode,
+                        'busycustomer_id' => $masterCode,
                         'party_name' => $name,
                         'due_amount' => round($amount, 2),
                     ]

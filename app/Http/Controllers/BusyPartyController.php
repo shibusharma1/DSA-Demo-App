@@ -83,7 +83,7 @@ class BusyPartyController extends Controller
                     'success',
                     $result['message']
                         . ' BUSY Master ID: '
-                        . $result['busyparty_id']
+                        . $result['busycustomer_id']
                 );
         }
 
@@ -142,7 +142,7 @@ class BusyPartyController extends Controller
                     'success',
                     $result['message']
                         . ' BUSY Master ID: '
-                        . $result['busyparty_id']
+                        . $result['busycustomer_id']
                 );
         }
 

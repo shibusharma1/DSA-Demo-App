@@ -12,7 +12,7 @@ class PartyBusy extends Model
 
     protected $fillable = [
         'company_id',
-        'busyparty_id',
+        'busycustomer_id',
 
         'company_name',
         'name',
@@ -121,6 +121,6 @@ class PartyBusy extends Model
     
     public function isSyncedToBusy(): bool
     {
-        return !empty($this->busyparty_id)  && $this->busy_sync_status === 'Synced';
+        return !empty($this->busycustomer_id)  && $this->busy_sync_status === 'Synced';
     }
 }

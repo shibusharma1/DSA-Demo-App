@@ -91,7 +91,7 @@ class Collection extends Model
      * Existing DSA client.
      *
      * IMPORTANT:
-     * client_id belongs to the existing clients table.
+     * client_id belongs to the existing parties_busy table.
      */
     public function client(): BelongsTo
     {

@@ -69,6 +69,22 @@ class BusyToDsaCollections
                 foreach ($customerRows as $customerData) {
                     $customerRow = $customerData['row'];
                     $client = $customerData['client'];
+                    Log::info("This is the client", [$client]);
+                    // Skip Cash ledger
+                    if (strtolower(trim($client->company_name ?? '')) === 'cash') {
+                        Log::channel('busy_logs')->info(
+                            'Collection skipped: Cash ledger',
+                            [
+                                'company_id' => $companyId,
+                                'busy_vch_code' => $externalId,
+                                'client_id' => $client->id,
+                                'company_name' => $client->company_name,
+                            ]
+                        );
+
+                        $result['skipped']++;
+                        continue;
+                    }
                     $amount = abs((float) ($customerRow['amount'] ?? 0));
                     if ($amount <= 0) {
                         Log::channel('busy')->warning(
@@ -178,7 +194,7 @@ class BusyToDsaCollections
 
             $client = DB::table('parties_busy')
                 ->where('company_id', $companyId)
-                ->where('busyparty_id', $masterCode)
+                ->where('busycustomer_id', $masterCode)
                 ->first();
             if ($client) {
                 $matches[] = [
@@ -215,29 +231,29 @@ class BusyToDsaCollections
         return empty($parts) ? null : implode(' — ', $parts);
     }
     /**
- * Deactivate DSA collections that are missing from the latest BUSY response.
- */
-private function deactivateMissingCollections(array $busyCollectionIds, int $companyId): int
-{
-    $busyCollectionIds = collect($busyCollectionIds)
-        ->filter()
-        ->map(fn ($id) => trim((string) $id))
-        ->unique()
-        ->values()
-        ->toArray();
+     * Deactivate DSA collections that are missing from the latest BUSY response.
+     */
+    private function deactivateMissingCollections(array $busyCollectionIds, int $companyId): int
+    {
+        $busyCollectionIds = collect($busyCollectionIds)
+            ->filter()
+            ->map(fn($id) => trim((string) $id))
+            ->unique()
+            ->values()
+            ->toArray();
 
-    // Never deactivate everything if BUSY returns an empty response.
-    if (empty($busyCollectionIds)) {
-        return 0;
+        // Never deactivate everything if BUSY returns an empty response.
+        if (empty($busyCollectionIds)) {
+            return 0;
+        }
+
+        return Collection::where('company_id', $companyId)
+            ->whereNotNull('busycollection_id')
+            ->whereNotIn('busycollection_id', $busyCollectionIds)
+            ->where('status', '!=', 'Inactive')
+            ->update([
+                'deleted_at' => now(),
+                'updated_at' => now(),
+            ]);
     }
-
-    return Collection::where('company_id', $companyId)
-        ->whereNotNull('busycollection_id')
-        ->whereNotIn('busycollection_id', $busyCollectionIds)
-        ->where('status', '!=', 'Inactive')
-        ->update([
-            'deleted_at' => now(),
-            'updated_at' => now(),
-        ]);
-}
 }

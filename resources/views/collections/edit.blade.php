@@ -38,8 +38,8 @@
                     'collection' =>
                         $collection,
 
-                    'clients' =>
-                        $clients,
+                    'parties_busy' =>
+                        $parties_busy,
 
                     'collectionTypes' =>
                         $collectionTypes,

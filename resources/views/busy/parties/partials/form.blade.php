@@ -712,7 +712,7 @@
             </p>
 
             <p class="mt-1 font-semibold text-slate-800">
-                {{ $party->busyparty_id ?: 'Not Synced' }}
+                {{ $party->busycustomer_id ?: 'Not Synced' }}
             </p>
         </div>
 

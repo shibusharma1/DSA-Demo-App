@@ -2,7 +2,6 @@
 
 namespace App\Services\busy;
 
-use App\Models\Order;
 use App\Services\BusyApiService;
 use Carbon\Carbon;
 use DOMDocument;
@@ -16,136 +15,181 @@ class DsaToBusyOrder
         private readonly BusyApiService $busyApiService
     ) {}
 
-    /** Push a DSA order to BUSY as a Sale Voucher. */
+    /** Push an order using the actual DSA tables; no Eloquent relationships. */
     public function pushOrder(int $orderId): array
     {
         $result = [
-            'success' => false,
-            'order_id' => $orderId,
-            'busyorder_id' => null,
-            'message' => null,
-            'error' => null,
+            'success' => false, 'order_id' => $orderId,
+            'busyorder_id' => null, 'message' => null, 'error' => null,
         ];
-        try {
 
-            /* Load complete order */
-            $order = Order::with(['client', 'orderdetails','taxes'])->find($orderId);
-             Log::info("Data send to Busy from the Sync to busy function:-",[$order]);
+        try {
+            $order = DB::table('orders')->where('id', $orderId)
+                ->whereNull('deleted_at')->first();
             if (!$order) {
                 throw new \RuntimeException('Order not found.');
             }
-
-            /*Basic validation */
-            if (!$order->client) {
-                throw new \RuntimeException('Order customer is not available.');
+            if (empty($order->order_date) || empty($order->order_no)) {
+                throw new \RuntimeException('Order date or number missing.');
+            }
+            $client = DB::table('parties_busy')->where('id', $order->client_id)
+                ->where('company_id', $order->company_id)->first();
+            if (!$client || empty($client->busycustomer_id)) {
+                throw new \RuntimeException('Customer is not mapped to BUSY.');
             }
 
-            if (!$order->client->busyparty_id) {
-                throw new \RuntimeException('Selected customer is not mapped to BUSY.');
-            }
-
-            if ($order->details->isEmpty()) {
+            $details = DB::table('orderproducts as od')
+                ->leftJoin('products as p', function ($join) use ($order) {
+                    $join->on('p.id', '=', 'od.product_id')
+                        ->where('p.company_id', '=', $order->company_id);
+                })
+                ->leftJoin('unit_types as ut', function ($join) use ($order) {
+                    $join->on('ut.id', '=', 'od.unit')
+                        ->where('ut.company_id', '=', $order->company_id);
+                })
+                ->where('od.order_id', $orderId)
+                ->whereNull('od.deleted_at')
+                ->orderBy('od.id')
+                ->select([
+                    'od.id', 'od.order_id', 'od.product_id', 'od.unit as unit_id',
+                    'od.rate', 'od.quantity', 'od.amount', 'od.ptotal_amt',
+                    'od.pdiscount as discount', 'od.pdiscount_type as discount_type',
+                    'od.short_desc as description',
+                    'p.id as product__id', 'p.busyproduct_id', 'p.product_name',
+                    'ut.id as unit__id', 'ut.busyunit_id',
+                    'ut.name as unit_name', 'ut.symbol as unit_symbol',
+                ])->get();
+            if ($details->isEmpty()) {
                 throw new \RuntimeException('Order does not contain any products.');
             }
 
-            /*Validate every detail */
-            foreach ($order->details as $detail) {
-                if (!$detail->product) {
-                    throw new \RuntimeException("Product missing for order detail #{$detail->id}.");
-                }
+            $productTaxes = DB::table('tax_on_orderproducts as tp')
+                ->leftJoin('tax_types as tt', function ($join) use ($order) {
+                    $join->on('tt.id', '=', 'tp.tax_type_id')
+                        ->where('tt.company_id', '=', $order->company_id);
+                })
+                ->whereIn('tp.orderproduct_id', $details->pluck('id')->all())
+                ->select('tp.orderproduct_id', 'tp.tax_type_id', 'tt.id',
+                    'tt.name', 'tt.display_name', 'tt.busytax_id', 'tt.percent', 'tt.chained_to')
+                ->get()->groupBy('orderproduct_id');
 
-                if (!$detail->product->busyproduct_id) {
-                    throw new \RuntimeException("Product {$detail->product->product_name} is not mapped to BUSY.");
-                }
+            $orderTaxes = DB::table('tax_on_orders')
+                ->where('order_id', $orderId)->get();
 
-                if ($detail->unit_id && (!$detail->unit || !$detail->unit->busyunit_id)) {
-                    throw new \RuntimeException("Unit is not mapped to BUSY for product {$detail->product->product_name}.");
+            // This XML has a single ItemTaxCategory per item. Do not guess
+            // how order-level or multiple/chained taxes map into BUSY.
+            if (!(int) $order->product_level_tax_flag &&
+                ($orderTaxes->isNotEmpty() || abs((float) $order->tax) > 0.005)) {
+                throw new \RuntimeException('Order-level tax requires a verified BUSY tax mapping.');
+            }
+            $lineTaxTotal = 0.0;
+            $lineNetTotal = 0.0;
+            foreach ($details as $detail) {
+                if (!$detail->product__id || empty($detail->busyproduct_id)) {
+                    throw new \RuntimeException("Product #{$detail->product_id} is not mapped to BUSY.");
                 }
-
-                if ($detail->tax_id && (!$detail->tax || !$detail->tax->busytax_id)) {
-                    throw new \RuntimeException("Tax is not mapped to BUSY for product {$detail->product->product_name}.");
+                if ($detail->unit_id && (!$detail->unit__id || empty($detail->busyunit_id))) {
+                    throw new \RuntimeException("Unit not mapped for product #{$detail->product_id}.");
                 }
+                $detail->product = (object) ['id' => $detail->product__id,
+                    'busyproduct_id' => $detail->busyproduct_id, 'product_name' => $detail->product_name];
+                $detail->unit = $detail->unit_id ? (object) ['id' => $detail->unit__id,
+                    'busyunit_id' => $detail->busyunit_id, 'name' => $detail->unit_name,
+                    'symbol' => $detail->unit_symbol] : null;
+                if (!is_numeric($detail->quantity) || !is_numeric($detail->rate) ||
+                    (float) $detail->quantity <= 0 || (float) $detail->rate < 0) {
+                    throw new \RuntimeException("Invalid quantity/rate for line #{$detail->id}.");
+                }
+                $gross = round((float) $detail->quantity * (float) $detail->rate, 2);
+                $discount = (int) $order->product_level_discount_flag
+                    ? (float) $detail->discount : 0.0;
+                $discountAmount = $this->discountAmount($gross, $discount, $detail->discount_type);
+                $detail->discount_percent = $gross > 0 ? $discountAmount * 100 / $gross : 0;
+                $detail->taxable_amount = round($gross - $discountAmount, 2);
+                $taxes = $productTaxes->get($detail->id, collect());
+                $detail->tax = null;
+                $detail->tax_rate = 0;
+                $detail->tax_amount = 0;
+                if ((int) $order->product_level_tax_flag) {
+                    if ($taxes->count() > 1) {
+                        throw new \RuntimeException("Multiple taxes on line #{$detail->id}; BUSY combined category must be verified.");
+                    }
+                    if ($taxes->isNotEmpty()) {
+                        $tax = $taxes->first();
+                        if (!$tax->id || empty($tax->busytax_id) || !empty($tax->chained_to) || !is_numeric($tax->percent)) {
+                            throw new \RuntimeException("Missing or chained BUSY tax mapping on line #{$detail->id}.");
+                        }
+                        $detail->tax = $tax;
+                        $detail->tax_rate = (float) $tax->percent;
+                        $detail->tax_amount = round($detail->taxable_amount * $detail->tax_rate / 100, 2);
+                    }
+                }
+                $lineTaxTotal += $detail->tax_amount;
+                $lineNetTotal += $detail->taxable_amount;
             }
 
-            /*Generate XML */
+            // Guard the assumed calculation against the persisted order totals.
+            if (abs($lineTaxTotal - (float) $order->tax) > 0.011) {
+                throw new \RuntimeException('Calculated line tax differs from saved order tax.');
+            }
+            $order->busy_discount_amount = $this->discountAmount($lineNetTotal,
+                (float) $order->discount, $order->discount_type);
+            $expectedTotal = round($lineNetTotal + $lineTaxTotal - $order->busy_discount_amount, 2);
+            if (abs($expectedTotal - (float) $order->grand_total) > 0.011) {
+                throw new \RuntimeException('Calculated voucher total differs from saved grand total. Check discount, tax and delivery charges.');
+            }
+            $order->client = $client;
+            $order->details = $details;
             $xml = $this->buildSaleXml($order);
-             Log::channel('frappy')->info("XML data send to the Busy form Push Order function:-",[$result]);
+            Log::channel('busy_logs')->info('BUSY Sale XML Generated', ['order_id' => $orderId, 'xml' => $xml]);
 
-            Log::channel('busy_logs')->info(
-                'BUSY Sale XML Generated',
-                [
-                    'order_id' => $order->id,
-                    'order_no' => $order->order_no,
-                    'xml' => $xml,
-                ]
-            );
-
-            /*Send to BUSY */
-            if ($order->busyorder_id) {
-                // Existing BUSY voucher → MODIFY
-                $response = $this->busyApiService->modifySaleVoucher($xml);
-            } else {
-                // New order → CREATE
-                $response = $this->busyApiService->createSaleVoucher($xml);
-            }
-
+            $response = !empty($order->busyorder_id)
+                ? $this->busyApiService->modifySaleVoucher($xml)
+                : $this->busyApiService->createSaleVoucher($xml);
             if (!($response['success'] ?? false)) {
-                throw new \RuntimeException($response['description'] ?? 'BUSY Sale Voucher creation failed.');
+                throw new \RuntimeException($response['description'] ?? 'BUSY Sale Voucher sync failed.');
             }
-
-            /*Extract BUSY voucher identifier */
             $busyOrderId = $this->extractBusyVoucherId($response['body'] ?? '');
-
             if (!$busyOrderId) {
-                throw new \RuntimeException('BUSY returned HTTP 200 but did not return a voucher ID or confirmation. busy ID not received');
+                throw new \RuntimeException('BUSY response has no voucher ID. Verify remotely before retrying to avoid duplication.');
             }
-
-            /*Update DSA Order */
-            $order->update([
-                'busyorder_id' => $busyOrderId,
-                'busy_sync_status' => 'Synced',
-                'busy_sync_message' => null,
-                'busy_synced_at' => now(),
-                'status' => 'Confirmed',
-            ]);
-
+            DB::table('orders')->where('id', $orderId)
+                ->where('company_id', $order->company_id)
+                ->update(['busyorder_id' => $busyOrderId, 'updated_at' => now()]);
             $result['success'] = true;
             $result['busyorder_id'] = $busyOrderId;
             $result['message'] = 'Order successfully synchronized with BUSY.';
-
-            Log::channel('busy_logs')->info(
-                'BUSY Sale Sync Completed',
-                [
-                    'order_id' => $order->id,
-                    'order_no' => $order->order_no,
-                    'busyorder_id' => $busyOrderId,
-                ]
-            );
-            return $result;
         } catch (Throwable $e) {
-
-            /*Mark order as failed */
-            Order::where('id', $orderId)->update([
-                'busy_sync_status' => 'Failed',
-                'busy_sync_message' => $e->getMessage(),
-            ]);
-
             $result['error'] = $e->getMessage();
-
-            Log::channel('busy_logs')->error(
-                'BUSY Sale Sync Failed',
-                [
-                    'order_id' => $orderId,
-                    'message' => $e->getMessage(),
-                    'trace' => $e->getTraceAsString(),
-                ]
-            );
-            return $result;
+            Log::channel('busy_logs')->error('BUSY Sale Sync Failed', [
+                'order_id' => $orderId, 'message' => $e->getMessage(),
+            ]);
         }
+        return $result;
+    }
+
+    /** Assumed DSA discount convention: percent or fixed amount. */
+    private function discountAmount(float $base, float $discount, $type): float
+    {
+        if ($discount == 0.0) {
+            return 0.0;
+        }
+        $type = strtolower(trim((string) $type));
+        if (in_array($type, ['percent', 'percentage', '%'], true)) {
+            $amount = $base * $discount / 100;
+        } elseif (in_array($type, ['amount', 'fixed', 'flat'], true)) {
+            $amount = $discount;
+        } else {
+            throw new \RuntimeException('Unsupported discount type: ' . $type);
+        }
+        if ($amount < 0 || $amount > $base) {
+            throw new \RuntimeException('Discount is outside the valid amount range.');
+        }
+        return round($amount, 2);
     }
 
     /** Build BUSY Sale XML. */
-    private function buildSaleXml(Order $order): string
+    private function buildSaleXml(object $order): string
     {
         $xml = new DOMDocument('1.0', 'UTF-8');
         $xml->formatOutput = false;
@@ -164,7 +208,7 @@ class DsaToBusyOrder
         $this->appendText($xml, $sale, 'StockUpdationDate', Carbon::parse($order->order_date)->format('d-m-Y'));
 
         /*Voucher Number */
-        $this->appendText($xml, $sale, 'StockUpdationDate', Carbon::parse($order->order_date)->format('d-m-Y'));
+        $this->appendText($xml, $sale, 'VchNo', (string) $order->order_no);
 
         /*Sales Type*/
         $this->appendText($xml, $sale, 'STPTName', 'Local-ItemWise');
@@ -199,7 +243,7 @@ class DsaToBusyOrder
     /**
      * Build BillingDetails.
      */
-    private function buildBillingDetails(DOMDocument $xml, \DOMElement $sale, Order $order): void
+    private function buildBillingDetails(DOMDocument $xml, \DOMElement $sale, object $order): void
     {
         $billing = $xml->createElement('BillingDetails');
         $this->appendText($xml, $billing, 'PartyName', $this->getClientBusyName($order));
@@ -211,20 +255,20 @@ class DsaToBusyOrder
     /**
      * Build VchOtherInfoDetails.
      */
-    private function buildOtherInformation(DOMDocument $xml, \DOMElement $sale, Order $order): void
+    private function buildOtherInformation(DOMDocument $xml, \DOMElement $sale, object $order): void
     {
         $otherInfo = $xml->createElement('VchOtherInfoDetails');
-        $this->appendText($xml, $otherInfo, 'Narration1', $order->order_notes ?? '');
+        $this->appendText($xml, $otherInfo, 'Narration1', $order->order_note ?? '');
         $sale->appendChild($otherInfo);
     }
 
     /**
      * Build ItemEntries.
      */
-    private function buildItemEntries(DOMDocument $xml, \DOMElement $sale, Order $order): void
+    private function buildItemEntries(DOMDocument $xml, \DOMElement $sale, object $order): void
     {
         $itemEntries = $xml->createElement('ItemEntries');
-        foreach ($order->details->sortBy('sort_order') as $index => $detail) {
+        foreach ($order->details->values() as $index => $detail) {
             $item = $xml->createElement('ItemDetail');
             $product = $detail->product;
             $unit = $detail->unit;
@@ -267,13 +311,7 @@ class DsaToBusyOrder
             $this->appendText($xml, $item, 'NettAmount', $this->formatNumber($detail->taxable_amount));
 
             /* Discount */
-            $discountPercent = 0;
-
-            if ($detail->discount_type === 'percent') {
-                $discountPercent = (float) $detail->discount;
-            }
-
-            $this->appendText($xml, $item, 'CompoundDiscount', $this->formatNumber($discountPercent));
+            $this->appendText($xml, $item, 'CompoundDiscount', $this->formatNumber($detail->discount_percent));
 
             /* Tax */
             $this->appendText($xml, $item, 'STAmount', $this->formatNumber($detail->tax_amount));
@@ -295,9 +333,9 @@ class DsaToBusyOrder
     }
 
     /* Build BillSundries. Currently used for order-level discount. */
-    private function buildBillSundries(DOMDocument $xml, \DOMElement $sale, Order $order): void {
+    private function buildBillSundries(DOMDocument $xml, \DOMElement $sale, object $order): void {
 
-        if ((float) $order->discount <= 0) {
+        if ((float) $order->busy_discount_amount <= 0) {
             return;
         }
 
@@ -306,7 +344,7 @@ class DsaToBusyOrder
 
         $this->appendText($xml, $detail, 'SrNo', '1');
         $this->appendText($xml, $detail, 'BSName', 'Discount');
-        $this->appendText($xml, $detail, 'Amt', $this->formatNumber($order->discount));
+        $this->appendText($xml, $detail, 'Amt', $this->formatNumber($order->busy_discount_amount));
         $this->appendText($xml, $detail, 'Date', Carbon::parse($order->order_date)->format('d-m-Y'));
         $this->appendText($xml, $detail, 'VchNo', $order->order_no);
         $this->appendText($xml, $detail, 'VchType', '9');
@@ -316,7 +354,7 @@ class DsaToBusyOrder
     }
 
     /* Build PendingBillDetails. */
-    private function buildPendingBillDetails(DOMDocument $xml, \DOMElement $sale, Order $order): void {
+    private function buildPendingBillDetails(DOMDocument $xml, \DOMElement $sale, object $order): void {
 
         $pending = $xml->createElement('PendingBillDetails');
         $billDetail = $xml->createElement('BillDetail');
@@ -329,7 +367,7 @@ class DsaToBusyOrder
         $this->appendText($xml, $refs, 'SrNo', '1');
         $this->appendText($xml, $refs, 'RefNo', $order->order_no);
         $this->appendText($xml, $refs, 'Date', Carbon::parse($order->order_date)->format('d-m-Y'));
-        $this->appendText($xml, $refs, 'DueDate', Carbon::parse($order->order_date)->format('d-m-Y'));
+        $this->appendText($xml, $refs, 'DueDate', Carbon::parse($order->due_date ?: $order->order_date)->format('d-m-Y'));
 
         /* Positive value for receivable */
         $this->appendText($xml, $refs, 'Value1', $this->formatNumber($order->grand_total));
@@ -340,11 +378,11 @@ class DsaToBusyOrder
     }
 
     /*Get BUSY customer name. The BUSY XML requires MasterName1. We use the DSA client's stored BUSY mapping/name. */
-    private function getClientBusyName(Order $order): string {
+    private function getClientBusyName(object $order): string {
         $client = $order->client;
 
-        /*If your clients table has a dedicated BUSY name column, use it here. */
-        return trim((string) ($client->company_name ?: $client->name ?: $client->busyparty_id));
+        /*If your parties_busy table has a dedicated BUSY name column, use it here. */
+        return trim((string) (($client->company_name ?? '') ?: ($client->name ?? '') ?: $client->busycustomer_id));
     }
 
     /* Get BUSY product name. */

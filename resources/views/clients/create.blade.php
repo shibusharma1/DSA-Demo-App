@@ -29,7 +29,7 @@
         @endif
 
 
-        <form action="{{ route('clients.store') }}" method="POST" class="bg-white p-6 shadow rounded">
+        <form action="{{ route('parties_busy.store') }}" method="POST" class="bg-white p-6 shadow rounded">
             @csrf
 
             <input type="text" name="name" placeholder="Client Name" class="w-full border p-2 mb-3" required>

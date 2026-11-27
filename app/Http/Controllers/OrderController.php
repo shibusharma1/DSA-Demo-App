@@ -81,8 +81,8 @@ class OrderController extends Controller
     public function create(Request $request): View
     {
         $companyId = (int) ($request->user()?->company_id ?? 1);
-        /*Clients */
-        $clients = DB::table('parties_busy')
+        /*parties_busy */
+        $parties_busy = DB::table('parties_busy')
             ->where('company_id', $companyId)
             ->where(function ($query) {
                 $query->whereNull('status')
@@ -94,7 +94,7 @@ class OrderController extends Controller
                 'name',
                 'company_name',
                 'mobile',
-                'busyparty_id',
+                'busycustomer_id',
             ]);
 
         /*Products */
@@ -146,7 +146,7 @@ class OrderController extends Controller
 
         return view('orders.create', compact(
             'companyId',
-            'clients',
+            'parties_busy',
             'products',
             'taxes',
             'units'
@@ -475,11 +475,11 @@ class OrderController extends Controller
 
         /*
     |--------------------------------------------------------------------------
-    | Clients
+    | parties_busy
     |--------------------------------------------------------------------------
     */
 
-        $clients = DB::table('parties_busy')
+        $parties_busy = DB::table('parties_busy')
             ->where('company_id', $companyId)
             ->where(function ($query) {
                 $query->whereNull('status')
@@ -491,7 +491,7 @@ class OrderController extends Controller
                 'name',
                 'company_name',
                 'mobile',
-                'busyparty_id',
+                'busycustomer_id',
             ]);
 
         /*
@@ -591,7 +591,7 @@ class OrderController extends Controller
 
         return view('orders.edit', compact(
             'order',
-            'clients',
+            'parties_busy',
             'products',
             'taxes',
             'units',

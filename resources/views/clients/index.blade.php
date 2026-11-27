@@ -6,9 +6,9 @@
 <div class="max-w-7xl mx-auto py-10">
 
     <div class="flex justify-between mb-6">
-        <h1 class="text-2xl font-bold text-teal-600">Clients</h1>
+        <h1 class="text-2xl font-bold text-teal-600">parties_busy</h1>
 
-        <a href="{{ route('clients.create') }}"
+        <a href="{{ route('parties_busy.create') }}"
            class="bg-teal-600 text-white px-4 py-2 rounded">
             Add Client
         </a>
@@ -33,7 +33,7 @@
         </thead>
 
         <tbody>
-            @foreach($clients as $client)
+            @foreach($parties_busy as $client)
             <tr class="border-b">
                 <td class="p-3">{{ $client->name }}</td>
                 <td class="p-3">{{ $client->company_name }}</td>
@@ -42,10 +42,10 @@
                 <td class="p-3">{{ $client->status }}</td>
 
                 <td class="p-3 flex gap-2">
-                    <a href="{{ route('clients.edit',$client->id) }}"
+                    <a href="{{ route('parties_busy.edit',$client->id) }}"
                        class="bg-yellow-500 text-white px-2 py-1 rounded">Edit</a>
 
-                    <form method="POST" action="{{ route('clients.destroy',$client->id) }}">
+                    <form method="POST" action="{{ route('parties_busy.destroy',$client->id) }}">
                         @csrf @method('DELETE')
                         <button class="bg-red-500 text-white px-2 py-1 rounded">Delete</button>
                     </form>
@@ -56,7 +56,7 @@
     </table>
 
     <div class="mt-5">
-        {{ $clients->links() }}
+        {{ $parties_busy->links() }}
     </div>
 </div>
 @endsection

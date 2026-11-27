@@ -427,6 +427,7 @@ class BusyToDsaItem
 
         return $taxIds;
     }
+    
     private function syncProductTaxes(int $productId, array $taxIds): void
     {
         // Replace associations only when a valid tax mapping exists.

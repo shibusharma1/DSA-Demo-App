@@ -124,12 +124,12 @@
                                         Select Party Name
                                     </option>
 
-                                    @foreach ($clients as $client)
+                                    @foreach ($parties_busy as $client)
                                         <option value="{{ $client->id }}" @selected(old('client_id') == $client->id)>
                                             {{ $client->company_name ?: $client->name }}
 
-                                            @if ($client->busyparty_id)
-                                                — BUSY #{{ $client->busyparty_id }}
+                                            @if ($client->busycustomer_id)
+                                                — BUSY #{{ $client->busycustomer_id }}
                                             @endif
                                         </option>
                                     @endforeach

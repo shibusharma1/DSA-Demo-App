@@ -139,19 +139,19 @@ class CollectionController extends Controller
         $companyId = 1;
 
         /*
-         * Only show clients that belong to
+         * Only show parties_busy that belong to
          * current company and already have BUSY party ID.
          */
-        $clients = PartyBusy::query()
+        $parties_busy = PartyBusy::query()
             ->where(
                 'company_id',
                 $companyId
             )
             ->whereNotNull(
-                'busyparty_id'
+                'busycustomer_id'
             )
             ->where(
-                'busyparty_id',
+                'busycustomer_id',
                 '!=',
                 ''
             )
@@ -188,7 +188,7 @@ class CollectionController extends Controller
         return view(
             'collections.create',
             compact(
-                'clients',
+                'parties_busy',
                 'collectionTypes',
                 'banks'
             )
@@ -231,7 +231,7 @@ class CollectionController extends Controller
          */
         if (
             empty(
-                $client->busyparty_id
+                $client->busycustomer_id
             )
         ) {
 
@@ -426,16 +426,16 @@ class CollectionController extends Controller
 
         $companyId = 1;
 
-        $clients = PartyBusy::query()
+        $parties_busy = PartyBusy::query()
             ->where(
                 'company_id',
                 $companyId
             )
             ->whereNotNull(
-                'busyparty_id'
+                'busycustomer_id'
             )
             ->where(
-                'busyparty_id',
+                'busycustomer_id',
                 '!=',
                 ''
             )
@@ -466,7 +466,7 @@ class CollectionController extends Controller
             'collections.edit',
             compact(
                 'collection',
-                'clients',
+                'parties_busy',
                 'collectionTypes',
                 'banks'
             )
@@ -507,7 +507,7 @@ class CollectionController extends Controller
 
         if (
             empty(
-                $client->busyparty_id
+                $client->busycustomer_id
             )
         ) {
 

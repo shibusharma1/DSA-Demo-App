@@ -10,7 +10,7 @@
         <h1 class="text-2xl font-bold mb-6 text-teal-600">Edit Client</h1>
 
 
-        <form method="POST" action="{{ route('clients.update', $client->id) }}" class="bg-white p-6 shadow rounded">
+        <form method="POST" action="{{ route('parties_busy.update', $client->id) }}" class="bg-white p-6 shadow rounded">
             @csrf
             @method('PUT')
 

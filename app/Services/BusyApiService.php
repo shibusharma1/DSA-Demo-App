@@ -9,8 +9,8 @@ use Illuminate\Support\Facades\Log;
 class BusyApiService
 {
     private const DEFAULT_BASE_URL = 'http://127.0.0.1:981';
-    private const DEFAULT_USERNAME = 's';
-    private const DEFAULT_PASSWORD = 's';
+    private const DEFAULT_USERNAME = 'busy';
+    private const DEFAULT_PASSWORD = 'busy';
     private const SALE_VOUCHER_TYPE = 9;
 
     private string $baseUrl;
@@ -426,6 +426,68 @@ class BusyApiService
             ];
         }
 
+        // $completeParties = [];
+        // $seenMasterCodes = [];
+
+        // foreach ($rows as $row) {
+        //     $attributes = $row->attributes();
+
+        //     $masterCode = trim((string) ($attributes['Code'] ?? ''));
+        //     $name = trim((string) ($attributes['Name'] ?? ''));
+
+        //     // Do not silently lose a row from the missing-ID comparison.
+        //     if ($masterCode === '' || !ctype_digit($masterCode) || (int) $masterCode <= 0 || $name === '') {
+        //         Log::channel('busy_logs')->error('Invalid BUSY customer row', [
+        //             'master_code' => $masterCode,
+        //             'name' => $name,
+        //         ]);
+
+        //         return [
+        //             ...$response,
+        //             'success' => false,
+        //             'description' => 'BUSY customer list contains an invalid row.',
+        //             'parties' => [],
+        //         ];
+        //     }
+
+        //     if (isset($seenMasterCodes[$masterCode])) {
+        //         return [
+        //             ...$response,
+        //             'success' => false,
+        //             'description' => 'BUSY customer list contains duplicate master codes.',
+        //             'parties' => [],
+        //         ];
+        //     }
+
+        //     $seenMasterCodes[$masterCode] = true;
+
+        //     $status = strcasecmp(
+        //         trim((string) ($attributes['DeactiveMaster'] ?? 'False')),
+        //         'True'
+        //     ) === 0 ? 'Inactive' : 'Active';
+
+        //     // Basic data is always available from MASTER1.
+        //     $party = [
+        //         'master_code' => $masterCode,
+        //         'name' => $name,
+        //         'status' => $status,
+        //         'details_loaded' => false,
+        //     ];
+
+        //     // Preserve useful basic fields when SC=9 fails.
+        //     $basicFields = [
+        //         'alias' => 'Alias',
+        //         'print_name' => 'PrintName',
+        //         'parent_group' => 'ParentGrp',
+        //         'tmp_parent_group_code' => 'ParentGrp',
+        //     ];
+
+        //     foreach ($basicFields as $key => $attributeName) {
+        //         $value = trim((string) ($attributes[$attributeName] ?? ''));
+        //         $party[$key] = $value !== '' ? $value : null;
+        //     }
+
+        $groupMap = $this->getAccountGroupMap();
         $completeParties = [];
         $seenMasterCodes = [];
 
@@ -466,26 +528,25 @@ class BusyApiService
                 'True'
             ) === 0 ? 'Inactive' : 'Active';
 
+            $alias = trim((string) ($attributes['Alias'] ?? ''));
+            $printName = trim((string) ($attributes['PrintName'] ?? ''));
+            $parentGrpCode = trim((string) ($attributes['ParentGrp'] ?? ''));
+
+            // Resolve group name from map if available; otherwise fallback to code
+            $resolvedParentGroup = $groupMap[$parentGrpCode]
+                ?? ($parentGrpCode !== '' ? $parentGrpCode : null);
+
             // Basic data is always available from MASTER1.
             $party = [
-                'master_code' => $masterCode,
-                'name' => $name,
-                'status' => $status,
-                'details_loaded' => false,
+                'master_code'           => $masterCode,
+                'name'                  => $name,
+                'status'                => $status,
+                'details_loaded'        => false,
+                'alias'                 => $alias !== '' ? $alias : null,
+                'print_name'            => $printName !== '' ? $printName : null,
+                'parent_group'          => $resolvedParentGroup,
+                'tmp_parent_group_code' => $parentGrpCode !== '' ? $parentGrpCode : null,
             ];
-
-            // Preserve useful basic fields when SC=9 fails.
-            $basicFields = [
-                'alias' => 'Alias',
-                'print_name' => 'PrintName',
-                'parent_group' => 'ParentGrp',
-                'tmp_parent_group_code' => 'ParentGrp',
-            ];
-
-            foreach ($basicFields as $key => $attributeName) {
-                $value = trim((string) ($attributes[$attributeName] ?? ''));
-                $party[$key] = $value !== '' ? $value : null;
-            }
 
             // Get complete customer/account details using BUSY GetMasterXML.
             $masterResponse = $this->getMaster((int) $masterCode);
@@ -514,6 +575,17 @@ class BusyApiService
             }
 
             libxml_clear_errors();
+
+            // Convert Windows-1252 / Latin-1 bytes (like 0xFF in <OldIdentity>) to valid UTF-8
+            if (!mb_check_encoding($masterXml, 'UTF-8')) {
+                $cleanXml = @mb_convert_encoding($masterXml, 'UTF-8', 'Windows-1252');
+                if ($cleanXml === false || $cleanXml === '') {
+                    $cleanXml = iconv('UTF-8', 'UTF-8//IGNORE', $masterXml);
+                }
+                if ($cleanXml !== false && $cleanXml !== '') {
+                    $masterXml = $cleanXml;
+                }
+            }
 
             $account = simplexml_load_string(
                 $masterXml,
@@ -1190,7 +1262,7 @@ class BusyApiService
 
                 $masterXml = $cleanXml;
             }
-            
+
             $item = simplexml_load_string(
                 $masterXml,
                 'SimpleXMLElement',
@@ -1569,5 +1641,49 @@ class BusyApiService
             'VchXml' => $voucherXml,
             'ModifyKey' => 3,
         ]);
+    }
+
+    /**
+     * Fetch all Account Groups (MASTERTYPE = 1) as a [Code => Name] map.
+     */
+    private function getAccountGroupMap(): array
+    {
+        $response = $this->executeQuery("SELECT Code, Name FROM MASTER1 WHERE MASTERTYPE = 1");
+
+        if (!($response['success'] ?? false) || empty($response['body'])) {
+            return [];
+        }
+
+        libxml_use_internal_errors(true);
+        libxml_clear_errors();
+
+        $xml = simplexml_load_string(
+            trim((string) $response['body']),
+            'SimpleXMLElement',
+            LIBXML_NONET
+        );
+
+        if ($xml === false) {
+            libxml_clear_errors();
+            return [];
+        }
+
+        $xml->registerXPathNamespace('z', '#RowsetSchema');
+        $rows = $xml->xpath('//z:row') ?: [];
+
+        $map = [];
+        foreach ($rows as $row) {
+            $attrs = $row->attributes();
+            $code = trim((string) ($attrs['Code'] ?? ''));
+            $name = trim((string) ($attrs['Name'] ?? ''));
+
+            if ($code !== '' && $name !== '') {
+                $map[$code] = $name;
+            }
+        }
+
+        libxml_clear_errors();
+
+        return $map;
     }
 }

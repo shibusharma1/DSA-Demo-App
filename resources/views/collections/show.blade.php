@@ -135,7 +135,7 @@
                     </label>
 
                     <h5>
-                        {{ $collection->client?->busyparty_id ?: '-' }}
+                        {{ $collection->client?->busycustomer_id ?: '-' }}
                     </h5>
 
                 </div>

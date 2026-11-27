@@ -26,7 +26,7 @@
 
                 <a href="{{ url('/customers') }}"
                     class="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-primary hover:text-white transition duration-300">
-                   ERP Clients
+                   ERP parties_busy
                 </a>
                 <a href="{{ url('/busy/parties') }}"
                     class="px-5 py-2.5 rounded-xl text-sm font-semibold text-gray-700 hover:bg-primary hover:text-white transition duration-300">

@@ -8,12 +8,12 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 // use App\Services\QuickBooks\Resolvers\CountryResolver;
 //manjit dai update
-// use Illuminate\Support\Str;
+use Illuminate\Support\Str;
 // use App\PermissionCategory;
 // use Illuminate\Http\Request;
 // use Spatie\Permission\Models\Role;
 // use Spatie\Permission\Models\Permission;
-// use App\PartyType;
+use App\Models\PartyType;
 
 // use App\Country;
 use Throwable;
@@ -88,6 +88,7 @@ class BusyToDSAParty
         $updated = 0;
         $skipped = 0;
         foreach ($parties as $party) {
+            // dd($party);
             /* BUSY Master Code */
             $busyPartyId = trim((string) ($party['master_code'] ?? ''));
             $name = trim((string) ($party['name'] ?? ''));
@@ -101,53 +102,53 @@ class BusyToDSAParty
             //     $country_info = Country::find($countryId);
             //     $phone_code = $country_info->phonecode ?? ''; // Or whatever field you need
             // }
-            Log::info('Party Type checking', [$party['parent_group']]);
+            Log::info('Party Type checking', [$party['master_code'], $party['parent_group']]);
             // Manjit dai update
-            // if (!empty($party['parent_group'])) {
-            //     $partyType = PartyType::firstOrCreate(
-            //         [
-            //             'company_id' => $company_id,
-            //             'name'       => $party['parent_group'],
-            //         ],
-            //         [
-            //             'short_name' => Str::upper(Str::substr($party['parent_group'], 0, 2)),
-            //             'parent_id'  => 0,
-            //         ]
-            //     );
+            if (!empty($party['parent_group'])) {
+                $partyType = PartyType::firstOrCreate(
+                    [
+                        'company_id' => $company_id,
+                        'name'       => $party['parent_group'],
+                    ],
+                    [
+                        'short_name' => Str::upper(Str::substr($party['parent_group'], 0, 2)),
+                        'parent_id'  => 0,
+                    ]
+                );
 
-            //     if ($partyType->wasRecentlyCreated) {
+                //     if ($partyType->wasRecentlyCreated) {
 
-            //         $permissionCategory = new PermissionCategory;
+                //         $permissionCategory = new PermissionCategory;
 
-            //         $permissionCategory->company_id               = $company_id;
-            //         $permissionCategory->permission_model_id      = $partyType->id;
-            //         $permissionCategory->permission_model         = 'PartyType';
-            //         $permissionCategory->permission_category_type = 'Company';
-            //         $permissionCategory->name                     = str_replace(' ', '_', $partyType->name);
-            //         $permissionCategory->display_name             = 'Party Type: ' . $partyType->name;
-            //         $permissionCategory->indexing_priority        = 10;
-            //         $permissionCategory->save();
+                //         $permissionCategory->company_id               = $company_id;
+                //         $permissionCategory->permission_model_id      = $partyType->id;
+                //         $permissionCategory->permission_model         = 'PartyType';
+                //         $permissionCategory->permission_category_type = 'Company';
+                //         $permissionCategory->name                     = str_replace(' ', '_', $partyType->name);
+                //         $permissionCategory->display_name             = 'Party Type: ' . $partyType->name;
+                //         $permissionCategory->indexing_priority        = 10;
+                //         $permissionCategory->save();
 
-            //         $partyTypePermissions = [
-            //             $this->addPermission($partyType, $permissionCategory, 'create', $company_id),
-            //             $this->addPermission($partyType, $permissionCategory, 'view', $company_id),
-            //             $this->addPermission($partyType, $permissionCategory, 'update', $company_id),
-            //             $this->addPermission($partyType, $permissionCategory, 'delete', $company_id),
-            //             $this->addPermission($partyType, $permissionCategory, 'status', $company_id),
-            //         ];
-            //         $role = Role::whereCompanyId($company_id)->whereName('Full Access')->whereGuardName('web')->first();
-            //         if ($role && !empty($partyTypePermissions)) {
-            //             $role->givePermissionTo($partyTypePermissions);
-            //         }
-            //     }
-            // } else {
-            //     $partyType = '';
-            // }
+                //         $partyTypePermissions = [
+                //             $this->addPermission($partyType, $permissionCategory, 'create', $company_id),
+                //             $this->addPermission($partyType, $permissionCategory, 'view', $company_id),
+                //             $this->addPermission($partyType, $permissionCategory, 'update', $company_id),
+                //             $this->addPermission($partyType, $permissionCategory, 'delete', $company_id),
+                //             $this->addPermission($partyType, $permissionCategory, 'status', $company_id),
+                //         ];
+                //         $role = Role::whereCompanyId($company_id)->whereName('Full Access')->whereGuardName('web')->first();
+                //         if ($role && !empty($partyTypePermissions)) {
+                //             $role->givePermissionTo($partyTypePermissions);
+                //         }
+                //     }
+            } else {
+                $partyType = '';
+            }
 
             $data = [
                 'company_name' => $name,
                 // Manjit dai Update
-                // 'client_type' => $partyType->id ?? 0,
+                'client_type' => $partyType->id ?? 0,
                 'name' => !empty($party['contact']) ? trim((string) $party['contact']) : null,
                 'client_code' => !empty($party['alias']) ? trim((string) $party['alias']) : null,
                 // 'parent_group' => !empty($party['parent_group']) ? trim((string) $party['parent_group']) : null,
@@ -174,18 +175,19 @@ class BusyToDSAParty
             // $updateData = $this->getBusyPartyUpdateData($party, $data);
             $existing = DB::table($this->partiesTable)
                 ->where('company_id', $company_id)
-                ->where('busyparty_id', $busyPartyId)
+                ->where('busycustomer_id', $busyPartyId)
                 ->first();
 
             if ($existing) {
+                $updateData = $this->getBusyPartyUpdateData($party, $data);
                 DB::table($this->partiesTable)
                     ->where('id', $existing->id)
-                    ->update($data);
+                    ->update($updateData);
                 $updated++;
             } else {
                 DB::table($this->partiesTable)->insert([
                     'company_id' => $company_id,
-                    'busyparty_id' => $busyPartyId,
+                    'busycustomer_id' => $busyPartyId,
                     ...$data,
                     'created_at' => now(),
                 ]);
@@ -248,14 +250,36 @@ class BusyToDSAParty
 
         return DB::table($this->partiesTable)
             ->where('company_id', $company_id)
-            ->whereNotNull('busyparty_id')
+            ->whereNotNull('busycustomer_id')
             ->whereNotIn(
-                'busyparty_id',
+                'busycustomer_id',
                 $busyPartyIds
             )
             ->update([
                 'status' => 'Inactive',
                 'updated_at' => now(),
             ]);
+    }
+    private function getBusyPartyUpdateData(array $party, array $data): array {
+        $detailsLoaded = $party['details_loaded'] ?? true;
+
+        if ($detailsLoaded) {
+            return $data;
+        }
+
+        // SC=9 failed: only update basic MASTER1 fields; never wipe detailed fields with null
+        $allowedFields = [
+            'company_name',
+            'client_type',
+            'client_code',
+            'status',
+            'updated_at',
+        ];
+
+        return array_filter(
+            $data,
+            fn($value, $column) => in_array($column, $allowedFields, true) && $value !== null,
+            ARRAY_FILTER_USE_BOTH
+        );
     }
 }
